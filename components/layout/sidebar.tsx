@@ -10,7 +10,7 @@ import {
   DollarSign,
   FileText,
   LayoutDashboard,
-  Settings,
+  Scale,
   TrendingUp,
 } from "lucide-react";
 
@@ -47,6 +47,11 @@ const navItems: NavItem[] = [
     href: "/reports/trial-balance",
     label: "试算表",
     icon: TrendingUp,
+  },
+  {
+    href: "/reports/balance-sheet",
+    label: "资产负债表",
+    icon: Scale,
   },
 ];
 
