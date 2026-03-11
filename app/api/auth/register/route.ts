@@ -135,32 +135,33 @@ async function initDefaultChartOfAccounts(
   companyId: string
 ) {
   const accounts = [
-    // 资产类
-    { code: "1001", name: "库存现金", type: "ASSET", normal: "DEBIT", isLeaf: true },
-    { code: "1002", name: "银行存款", type: "ASSET", normal: "DEBIT", isLeaf: true },
-    { code: "1122", name: "应收账款", type: "ASSET", normal: "DEBIT", isLeaf: true },
-    { code: "1405", name: "库存商品", type: "ASSET", normal: "DEBIT", isLeaf: true },
-    { code: "1601", name: "固定资产", type: "ASSET", normal: "DEBIT", isLeaf: true },
-    { code: "1602", name: "累计折旧", type: "ASSET", normal: "CREDIT", isLeaf: true },
-    // 负债类
-    { code: "2202", name: "应付账款", type: "LIABILITY", normal: "CREDIT", isLeaf: true },
-    { code: "2221", name: "应交税费", type: "LIABILITY", normal: "CREDIT", isLeaf: true },
-    { code: "2241", name: "其他应付款", type: "LIABILITY", normal: "CREDIT", isLeaf: true },
+    // 资产类 - 流动资产
+    { code: "1001", name: "库存现金",     type: "ASSET",     normal: "DEBIT",  isLeaf: true, category: "CURRENT_ASSET" },
+    { code: "1002", name: "银行存款",     type: "ASSET",     normal: "DEBIT",  isLeaf: true, category: "CURRENT_ASSET" },
+    { code: "1122", name: "应收账款",     type: "ASSET",     normal: "DEBIT",  isLeaf: true, category: "CURRENT_ASSET" },
+    { code: "1405", name: "库存商品",     type: "ASSET",     normal: "DEBIT",  isLeaf: true, category: "CURRENT_ASSET" },
+    // 资产类 - 非流动资产
+    { code: "1601", name: "固定资产",     type: "ASSET",     normal: "DEBIT",  isLeaf: true, category: "NON_CURRENT_ASSET" },
+    { code: "1602", name: "累计折旧",     type: "ASSET",     normal: "CREDIT", isLeaf: true, category: "NON_CURRENT_ASSET" },
+    // 负债类 - 流动负债
+    { code: "2202", name: "应付账款",     type: "LIABILITY", normal: "CREDIT", isLeaf: true, category: "CURRENT_LIABILITY" },
+    { code: "2221", name: "应交税费",     type: "LIABILITY", normal: "CREDIT", isLeaf: true, category: "CURRENT_LIABILITY" },
+    { code: "2241", name: "其他应付款",   type: "LIABILITY", normal: "CREDIT", isLeaf: true, category: "CURRENT_LIABILITY" },
     // 所有者权益
-    { code: "4001", name: "实收资本", type: "EQUITY", normal: "CREDIT", isLeaf: true },
-    { code: "4002", name: "资本公积", type: "EQUITY", normal: "CREDIT", isLeaf: true },
-    { code: "4101", name: "盈余公积", type: "EQUITY", normal: "CREDIT", isLeaf: true },
-    { code: "4103", name: "本年利润", type: "EQUITY", normal: "CREDIT", isLeaf: true },
-    { code: "4104", name: "利润分配", type: "EQUITY", normal: "CREDIT", isLeaf: true },
+    { code: "4001", name: "实收资本",     type: "EQUITY",    normal: "CREDIT", isLeaf: true, category: "EQUITY_ITEM" },
+    { code: "4002", name: "资本公积",     type: "EQUITY",    normal: "CREDIT", isLeaf: true, category: "EQUITY_ITEM" },
+    { code: "4101", name: "盈余公积",     type: "EQUITY",    normal: "CREDIT", isLeaf: true, category: "EQUITY_ITEM" },
+    { code: "4103", name: "本年利润",     type: "EQUITY",    normal: "CREDIT", isLeaf: true, category: "EQUITY_ITEM" },
+    { code: "4104", name: "利润分配",     type: "EQUITY",    normal: "CREDIT", isLeaf: true, category: "EQUITY_ITEM" },
     // 收入类
-    { code: "6001", name: "主营业务收入", type: "REVENUE", normal: "CREDIT", isLeaf: true },
-    { code: "6051", name: "其他业务收入", type: "REVENUE", normal: "CREDIT", isLeaf: true },
+    { code: "6001", name: "主营业务收入", type: "REVENUE",   normal: "CREDIT", isLeaf: true, category: "OPERATING_REVENUE" },
+    { code: "6051", name: "其他业务收入", type: "REVENUE",   normal: "CREDIT", isLeaf: true, category: "OPERATING_REVENUE" },
     // 费用类
-    { code: "6401", name: "主营业务成本", type: "EXPENSE", normal: "DEBIT", isLeaf: true },
-    { code: "6601", name: "销售费用", type: "EXPENSE", normal: "DEBIT", isLeaf: true },
-    { code: "6602", name: "管理费用", type: "EXPENSE", normal: "DEBIT", isLeaf: true },
-    { code: "6603", name: "财务费用", type: "EXPENSE", normal: "DEBIT", isLeaf: true },
-    { code: "6711", name: "营业外支出", type: "EXPENSE", normal: "DEBIT", isLeaf: true },
+    { code: "6401", name: "主营业务成本", type: "EXPENSE",   normal: "DEBIT",  isLeaf: true, category: "OPERATING_COST" },
+    { code: "6601", name: "销售费用",     type: "EXPENSE",   normal: "DEBIT",  isLeaf: true, category: "PERIOD_EXPENSE" },
+    { code: "6602", name: "管理费用",     type: "EXPENSE",   normal: "DEBIT",  isLeaf: true, category: "PERIOD_EXPENSE" },
+    { code: "6603", name: "财务费用",     type: "EXPENSE",   normal: "DEBIT",  isLeaf: true, category: "PERIOD_EXPENSE" },
+    { code: "6711", name: "营业外支出",   type: "EXPENSE",   normal: "DEBIT",  isLeaf: true, category: "NON_OPERATING_EXPENSE" },
   ];
 
   for (const acc of accounts) {
@@ -173,6 +174,7 @@ async function initDefaultChartOfAccounts(
         normalBalance: acc.normal as "DEBIT" | "CREDIT",
         level: 1,
         isLeaf: acc.isLeaf,
+        reportCategory: acc.category as "CURRENT_ASSET" | "NON_CURRENT_ASSET" | "CURRENT_LIABILITY" | "NON_CURRENT_LIABILITY" | "EQUITY_ITEM" | "OPERATING_REVENUE" | "NON_OPERATING_INCOME" | "OPERATING_COST" | "PERIOD_EXPENSE" | "NON_OPERATING_EXPENSE" | "INCOME_TAX",
       },
     });
   }

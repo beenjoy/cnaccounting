@@ -44,6 +44,7 @@ type Account = {
   level: number;
   isLeaf: boolean;
   isActive: boolean;
+  reportCategory: string | null;
   description: string | null;
 };
 
@@ -63,6 +64,53 @@ const accountTypeColor: Record<string, "default" | "secondary" | "info" | "succe
   EXPENSE: "secondary",
 };
 
+// 各科目类型对应的报表分类选项
+const reportCategoryOptions: Record<string, { value: string; label: string }[]> = {
+  ASSET: [
+    { value: "CURRENT_ASSET",     label: "流动资产" },
+    { value: "NON_CURRENT_ASSET", label: "非流动资产" },
+  ],
+  LIABILITY: [
+    { value: "CURRENT_LIABILITY",     label: "流动负债" },
+    { value: "NON_CURRENT_LIABILITY", label: "非流动负债" },
+  ],
+  EQUITY: [
+    { value: "EQUITY_ITEM", label: "所有者权益项目" },
+  ],
+  REVENUE: [
+    { value: "OPERATING_REVENUE",    label: "营业收入" },
+    { value: "NON_OPERATING_INCOME", label: "营业外收入" },
+  ],
+  EXPENSE: [
+    { value: "OPERATING_COST",        label: "营业成本" },
+    { value: "PERIOD_EXPENSE",        label: "期间费用" },
+    { value: "NON_OPERATING_EXPENSE", label: "营业外支出" },
+    { value: "INCOME_TAX",            label: "所得税费用" },
+  ],
+};
+
+const reportCategoryLabel: Record<string, string> = {
+  CURRENT_ASSET:          "流动资产",
+  NON_CURRENT_ASSET:      "非流动资产",
+  CURRENT_LIABILITY:      "流动负债",
+  NON_CURRENT_LIABILITY:  "非流动负债",
+  EQUITY_ITEM:            "所有者权益",
+  OPERATING_REVENUE:      "营业收入",
+  NON_OPERATING_INCOME:   "营业外收入",
+  OPERATING_COST:         "营业成本",
+  PERIOD_EXPENSE:         "期间费用",
+  NON_OPERATING_EXPENSE:  "营业外支出",
+  INCOME_TAX:             "所得税",
+};
+
+const REPORT_CATEGORIES = [
+  "CURRENT_ASSET", "NON_CURRENT_ASSET",
+  "CURRENT_LIABILITY", "NON_CURRENT_LIABILITY",
+  "EQUITY_ITEM",
+  "OPERATING_REVENUE", "NON_OPERATING_INCOME",
+  "OPERATING_COST", "PERIOD_EXPENSE", "NON_OPERATING_EXPENSE", "INCOME_TAX",
+] as const;
+
 const schema = z.object({
   code: z.string().min(1, "科目编码不能为空").max(20),
   name: z.string().min(1, "科目名称不能为空").max(100),
@@ -70,6 +118,7 @@ const schema = z.object({
   normalBalance: z.enum(["DEBIT", "CREDIT"]),
   parentId: z.string().optional(),
   isLeaf: z.boolean(),
+  reportCategory: z.enum(REPORT_CATEGORIES).optional().nullable(),
   description: z.string().optional(),
 });
 
@@ -101,6 +150,7 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
   });
 
   const watchedType = watch("accountType");
+  const watchedCategory = watch("reportCategory");
 
   const filtered = accounts.filter(
     (a) =>
@@ -111,7 +161,7 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
 
   const openCreate = () => {
     setEditingAccount(null);
-    reset({ isLeaf: true });
+    reset({ isLeaf: true, reportCategory: null });
     setDialogOpen(true);
   };
 
@@ -124,6 +174,7 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
       normalBalance: account.normalBalance as FormData["normalBalance"],
       parentId: account.parentId ?? undefined,
       isLeaf: account.isLeaf,
+      reportCategory: (account.reportCategory as FormData["reportCategory"]) ?? null,
       description: account.description ?? undefined,
     });
     setDialogOpen(true);
@@ -196,6 +247,7 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
               <TableHead className="w-32">科目编码</TableHead>
               <TableHead>科目名称</TableHead>
               <TableHead className="w-32">科目类型</TableHead>
+              <TableHead className="w-28">报表分类</TableHead>
               <TableHead className="w-24">借贷方向</TableHead>
               <TableHead className="w-20">末级</TableHead>
               <TableHead className="w-20">状态</TableHead>
@@ -205,7 +257,7 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {search ? "未找到匹配科目" : "暂无科目，请新增"}
                 </TableCell>
               </TableRow>
@@ -220,6 +272,11 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
                     <Badge variant={accountTypeColor[account.accountType] || "secondary"}>
                       {accountTypeLabel[account.accountType]}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {account.reportCategory
+                      ? reportCategoryLabel[account.reportCategory] ?? account.reportCategory
+                      : <span className="text-gray-300">—</span>}
                   </TableCell>
                   <TableCell className="text-sm">
                     {account.normalBalance === "DEBIT" ? "借方" : "贷方"}
@@ -293,6 +350,8 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
                     } else {
                       setValue("normalBalance", "CREDIT");
                     }
+                    // 清空报表分类（切换类型后需重新选）
+                    setValue("reportCategory", null);
                   }}
                 >
                   <SelectTrigger>
@@ -329,6 +388,33 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
                 </Select>
               </div>
             </div>
+
+            {/* 报表分类 - 根据科目类型动态显示选项 */}
+            {watchedType && reportCategoryOptions[watchedType] && (
+              <div className="space-y-1.5">
+                <Label>报表分类</Label>
+                <Select
+                  value={watchedCategory ?? ""}
+                  onValueChange={(v) =>
+                    setValue("reportCategory", v as FormData["reportCategory"])
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择报表分类（可选）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reportCategoryOptions[watchedType].map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  用于资产负债表和利润表的分组归类
+                </p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="description">备注</Label>

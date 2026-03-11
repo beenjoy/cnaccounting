@@ -3,10 +3,19 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+const REPORT_CATEGORIES = [
+  "CURRENT_ASSET", "NON_CURRENT_ASSET",
+  "CURRENT_LIABILITY", "NON_CURRENT_LIABILITY",
+  "EQUITY_ITEM",
+  "OPERATING_REVENUE", "NON_OPERATING_INCOME",
+  "OPERATING_COST", "PERIOD_EXPENSE", "NON_OPERATING_EXPENSE", "INCOME_TAX",
+] as const;
+
 const updateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   isLeaf: z.boolean(),
+  reportCategory: z.enum(REPORT_CATEGORIES).optional().nullable(),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         name: parsed.data.name,
         description: parsed.data.description,
         isLeaf: parsed.data.isLeaf,
+        reportCategory: parsed.data.reportCategory ?? null,
       },
     });
 

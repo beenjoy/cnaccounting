@@ -68,6 +68,30 @@ enum AuditAction {
   CLOSE_PERIOD
 }
 
+enum ReportCategory {
+  // 资产负债表 - 资产
+  CURRENT_ASSET         // 流动资产
+  NON_CURRENT_ASSET     // 非流动资产
+  // 资产负债表 - 负债
+  CURRENT_LIABILITY     // 流动负债
+  NON_CURRENT_LIABILITY // 非流动负债
+  // 资产负债表 - 所有者权益
+  EQUITY_ITEM           // 所有者权益项目
+  // 利润表
+  OPERATING_REVENUE     // 营业收入
+  OPERATING_COST        // 营业成本
+  PERIOD_EXPENSE        // 期间费用（销售/管理/财务）
+  NON_OPERATING_INCOME  // 营业外收入
+  NON_OPERATING_EXPENSE // 营业外支出
+  INCOME_TAX            // 所得税费用
+}
+
+enum CashFlowActivity {
+  OPERATING  // 经营活动
+  INVESTING  // 投资活动
+  FINANCING  // 筹资活动
+}
+
 // ============================================================
 // 用户与认证
 // ============================================================
@@ -246,6 +270,7 @@ model ChartOfAccount {
   isLeaf           Boolean              @default(true) // 末级科目才能记账
   isSummary        Boolean              @default(false)
   currency         String?              // 外币科目限定货币，null=不限
+  reportCategory   ReportCategory?      // 报表分类（用于资产负债表/利润表）
   isActive         Boolean              @default(true)
   description      String?
   createdAt        DateTime             @default(now())
@@ -355,10 +380,11 @@ model JournalEntryLine {
   currency       String         @default("CNY")
   exchangeRate   Decimal        @default(1) @db.Decimal(20, 10)
   // 本位币金额（折算后）
-  debitAmountLC  Decimal        @default(0) @db.Decimal(20, 4)
-  creditAmountLC Decimal        @default(0) @db.Decimal(20, 4)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  debitAmountLC    Decimal           @default(0) @db.Decimal(20, 4)
+  creditAmountLC   Decimal           @default(0) @db.Decimal(20, 4)
+  cashFlowActivity CashFlowActivity? // 现金流分类（用于现金流量表）
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account        ChartOfAccount @relation(fields: [accountId], references: [id])

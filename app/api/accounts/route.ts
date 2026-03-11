@@ -3,6 +3,14 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+const REPORT_CATEGORIES = [
+  "CURRENT_ASSET", "NON_CURRENT_ASSET",
+  "CURRENT_LIABILITY", "NON_CURRENT_LIABILITY",
+  "EQUITY_ITEM",
+  "OPERATING_REVENUE", "NON_OPERATING_INCOME",
+  "OPERATING_COST", "PERIOD_EXPENSE", "NON_OPERATING_EXPENSE", "INCOME_TAX",
+] as const;
+
 const createSchema = z.object({
   companyId: z.string(),
   code: z.string().min(1).max(20),
@@ -11,6 +19,7 @@ const createSchema = z.object({
   normalBalance: z.enum(["DEBIT", "CREDIT"]),
   parentId: z.string().optional(),
   isLeaf: z.boolean(),
+  reportCategory: z.enum(REPORT_CATEGORIES).optional().nullable(),
   description: z.string().optional(),
 });
 
@@ -71,6 +80,7 @@ export async function POST(req: NextRequest) {
         parentId: data.parentId,
         level,
         isLeaf: data.isLeaf,
+        reportCategory: data.reportCategory ?? null,
         description: data.description,
       },
     });
