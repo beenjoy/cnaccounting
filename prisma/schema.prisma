@@ -1,0 +1,396 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 枚举类型
+// ============================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  AUDITOR
+  PERIOD_MANAGER
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountNormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  POSTED
+  REVERSED
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum CurrencyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  POST
+  REVERSE
+  APPROVE
+  REJECT
+  OPEN_PERIOD
+  CLOSE_PERIOD
+}
+
+// ============================================================
+// 用户与认证
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  memberships   OrganizationMember[]
+  createdEntries JournalEntry[] @relation("CreatedBy")
+  approvedEntries JournalEntry[] @relation("ApprovedBy")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// 组织与公司
+// ============================================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  companies   Company[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole   @default(ACCOUNTANT)
+  joinedAt       DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+model Company {
+  id               String   @id @default(cuid())
+  organizationId   String
+  name             String
+  code             String
+  legalName        String?
+  taxId            String?
+  functionalCurrency String  @default("CNY") // ISO 4217
+  description      String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accounts         ChartOfAccount[]
+  fiscalYears      FiscalYear[]
+  journalEntries   JournalEntry[]
+  auditLogs        AuditLog[]
+
+  @@unique([organizationId, code])
+  @@map("companies")
+}
+
+// ============================================================
+// 货币与汇率
+// ============================================================
+
+model Currency {
+  code        String         @id  // ISO 4217 e.g. CNY, USD, EUR
+  name        String
+  nameEn      String?
+  symbol      String
+  decimals    Int            @default(2)
+  status      CurrencyStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  exchangeRatesFrom ExchangeRate[] @relation("FromCurrency")
+  exchangeRatesTo   ExchangeRate[] @relation("ToCurrency")
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id             String   @id @default(cuid())
+  fromCurrency   String
+  toCurrency     String
+  rate           Decimal  @db.Decimal(20, 10)
+  rateType       String   @default("SPOT") // SPOT, AVERAGE, CLOSING, HISTORICAL
+  effectiveDate  DateTime @db.Date
+  source         String?  // ECB, MANUAL, etc.
+  createdAt      DateTime @default(now())
+
+  from           Currency @relation("FromCurrency", fields: [fromCurrency], references: [code])
+  to             Currency @relation("ToCurrency", fields: [toCurrency], references: [code])
+
+  @@unique([fromCurrency, toCurrency, rateType, effectiveDate])
+  @@map("exchange_rates")
+}
+
+// ============================================================
+// 科目表
+// ============================================================
+
+model ChartOfAccount {
+  id               String               @id @default(cuid())
+  companyId        String
+  code             String               // 科目编码 e.g. 1001
+  name             String               // 科目名称
+  nameEn           String?
+  accountType      AccountType
+  normalBalance    AccountNormalBalance
+  parentId         String?
+  level            Int                  @default(1)
+  isLeaf           Boolean              @default(true) // 末级科目才能记账
+  isSummary        Boolean              @default(false)
+  currency         String?              // 外币科目限定货币，null=不限
+  isActive         Boolean              @default(true)
+  description      String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent           ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children         ChartOfAccount[]     @relation("AccountHierarchy")
+  journalLines     JournalEntryLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId, accountType])
+  @@map("chart_of_accounts")
+}
+
+// ============================================================
+// 会计年度与期间
+// ============================================================
+
+model FiscalYear {
+  id          String       @id @default(cuid())
+  companyId   String
+  year        Int          // e.g. 2024
+  startDate   DateTime     @db.Date
+  endDate     DateTime     @db.Date
+  isClosed    Boolean      @default(false)
+  closedAt    DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  periods     FiscalPeriod[]
+
+  @@unique([companyId, year])
+  @@map("fiscal_years")
+}
+
+model FiscalPeriod {
+  id           String       @id @default(cuid())
+  fiscalYearId String
+  periodNumber Int          // 1-12
+  name         String       // e.g. "2024年1月"
+  startDate    DateTime     @db.Date
+  endDate      DateTime     @db.Date
+  status       PeriodStatus @default(OPEN)
+  closedAt     DateTime?
+  reopenedAt   DateTime?
+  reopenReason String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntry[]
+
+  @@unique([fiscalYearId, periodNumber])
+  @@map("fiscal_periods")
+}
+
+// ============================================================
+// 日记账凭证
+// ============================================================
+
+model JournalEntry {
+  id              String             @id @default(cuid())
+  companyId       String
+  fiscalPeriodId  String
+  entryNumber     String             // 凭证编号 e.g. JE-2024-001
+  entryDate       DateTime           @db.Date
+  description     String
+  reference       String?            // 外部参考号
+  currency        String             @default("CNY")
+  status          JournalEntryStatus @default(DRAFT)
+  totalDebit      Decimal            @db.Decimal(20, 4)
+  totalCredit     Decimal            @db.Decimal(20, 4)
+  isBalanced      Boolean            @default(false)
+  createdById     String
+  approvedById    String?
+  approvedAt      DateTime?
+  postedAt        DateTime?
+  reversedEntryId String?            // 被冲销的原凭证
+  reversalEntryId String?            // 冲销凭证
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalPeriod    FiscalPeriod       @relation(fields: [fiscalPeriodId], references: [id])
+  createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
+  approvedBy      User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
+  lines           JournalEntryLine[]
+  auditLogs       AuditLog[]
+
+  @@unique([companyId, entryNumber])
+  @@index([companyId, fiscalPeriodId])
+  @@index([companyId, status])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             String         @id @default(cuid())
+  journalEntryId String
+  lineNumber     Int
+  accountId      String
+  description    String?
+  debitAmount    Decimal        @default(0) @db.Decimal(20, 4)
+  creditAmount   Decimal        @default(0) @db.Decimal(20, 4)
+  currency       String         @default("CNY")
+  exchangeRate   Decimal        @default(1) @db.Decimal(20, 10)
+  // 本位币金额（折算后）
+  debitAmountLC  Decimal        @default(0) @db.Decimal(20, 4)
+  creditAmountLC Decimal        @default(0) @db.Decimal(20, 4)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
+}
+
+// ============================================================
+// 审计日志
+// ============================================================
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  companyId    String?
+  userId       String
+  action       AuditAction
+  entityType   String      // "JournalEntry", "FiscalPeriod", etc.
+  entityId     String
+  description  String
+  oldValues    Json?
+  newValues    Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  company      Company?    @relation(fields: [companyId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+  journalEntry JournalEntry? @relation(fields: [entityId], references: [id], map: "audit_log_journal_entry_fk")
+
+  @@index([companyId, entityType])
+  @@index([userId])
+  @@map("audit_logs")
+}

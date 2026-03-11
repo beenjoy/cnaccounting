@@ -1,0 +1,421 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import Decimal from "decimal.js";
+import { Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatAmount } from "@/lib/utils";
+
+type Account = {
+  id: string;
+  code: string;
+  name: string;
+  accountType: string;
+  normalBalance: string;
+};
+
+type Period = {
+  id: string;
+  name: string;
+  year: number;
+};
+
+type Currency = {
+  code: string;
+  name: string;
+  symbol: string;
+};
+
+type LineItem = {
+  key: string;
+  accountId: string;
+  description: string;
+  debitAmount: string;
+  creditAmount: string;
+  currency: string;
+};
+
+interface JournalEntryFormProps {
+  companyId: string;
+  openPeriods: Period[];
+  accounts: Account[];
+  currencies: Currency[];
+  defaultPeriodId?: string;
+}
+
+const emptyLine = (): LineItem => ({
+  key: Math.random().toString(36).slice(2),
+  accountId: "",
+  description: "",
+  debitAmount: "",
+  creditAmount: "",
+  currency: "CNY",
+});
+
+export function JournalEntryForm({
+  companyId,
+  openPeriods,
+  accounts,
+  currencies,
+  defaultPeriodId,
+}: JournalEntryFormProps) {
+  const router = useRouter();
+  const [description, setDescription] = useState("");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [periodId, setPeriodId] = useState(defaultPeriodId || openPeriods[0]?.id || "");
+  const [reference, setReference] = useState("");
+  const [lines, setLines] = useState<LineItem[]>([emptyLine(), emptyLine()]);
+  const [isPending, setIsPending] = useState(false);
+
+  const totalDebit = lines.reduce(
+    (sum, l) => sum.plus(new Decimal(l.debitAmount || "0")),
+    new Decimal(0)
+  );
+  const totalCredit = lines.reduce(
+    (sum, l) => sum.plus(new Decimal(l.creditAmount || "0")),
+    new Decimal(0)
+  );
+  const isBalanced = totalDebit.equals(totalCredit) && totalDebit.gt(0);
+  const diff = totalDebit.minus(totalCredit);
+
+  const addLine = () => setLines((prev) => [...prev, emptyLine()]);
+
+  const removeLine = (key: string) => {
+    if (lines.length <= 2) {
+      toast.warning("凭证至少需要2行");
+      return;
+    }
+    setLines((prev) => prev.filter((l) => l.key !== key));
+  };
+
+  const updateLine = useCallback(
+    (key: string, field: keyof LineItem, value: string) => {
+      setLines((prev) =>
+        prev.map((l) => {
+          if (l.key !== key) return l;
+          const updated = { ...l, [field]: value };
+          // 借贷互斥：填写借方时清空贷方，反之亦然
+          if (field === "debitAmount" && value !== "") {
+            updated.creditAmount = "";
+          } else if (field === "creditAmount" && value !== "") {
+            updated.debitAmount = "";
+          }
+          return updated;
+        })
+      );
+    },
+    []
+  );
+
+  const handleSubmit = async (action: "draft" | "submit") => {
+    if (!description.trim()) {
+      toast.error("请填写凭证摘要");
+      return;
+    }
+    if (!periodId) {
+      toast.error("请选择会计期间");
+      return;
+    }
+    if (!entryDate) {
+      toast.error("请选择凭证日期");
+      return;
+    }
+
+    const validLines = lines.filter((l) => l.accountId);
+    if (validLines.length < 2) {
+      toast.error("至少需要2条明细行");
+      return;
+    }
+
+    if (!isBalanced) {
+      toast.error("借贷不平衡，无法提交");
+      return;
+    }
+
+    setIsPending(true);
+    try {
+      const response = await fetch("/api/journals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId,
+          fiscalPeriodId: periodId,
+          entryDate,
+          description,
+          reference: reference || undefined,
+          status: action === "draft" ? "DRAFT" : "PENDING_APPROVAL",
+          lines: validLines.map((l, i) => ({
+            lineNumber: i + 1,
+            accountId: l.accountId,
+            description: l.description,
+            debitAmount: l.debitAmount || "0",
+            creditAmount: l.creditAmount || "0",
+            currency: l.currency,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error || "保存失败");
+        return;
+      }
+
+      toast.success(action === "draft" ? "草稿已保存" : "凭证已提交审批");
+      router.push(`/journals/${result.entry.id}`);
+    } catch {
+      toast.error("网络错误");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+
+  return (
+    <div className="space-y-6">
+      {/* 基本信息 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">凭证信息</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="description">摘要 *</Label>
+              <Input
+                id="description"
+                placeholder="请输入凭证摘要..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="entryDate">凭证日期 *</Label>
+              <Input
+                id="entryDate"
+                type="date"
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>会计期间 *</Label>
+              <Select value={periodId} onValueChange={setPeriodId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择期间" />
+                </SelectTrigger>
+                <SelectContent>
+                  {openPeriods.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="reference">参考号</Label>
+              <Input
+                id="reference"
+                placeholder="外部单据号（可选）"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 明细行 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">凭证明细</CardTitle>
+            <Button variant="outline" size="sm" onClick={addLine}>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              添加行
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-gray-50">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground w-12">#</th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground w-48">
+                    会计科目
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">摘要</th>
+                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">
+                    借方金额
+                  </th>
+                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">
+                    贷方金额
+                  </th>
+                  <th className="text-center px-4 py-2 font-medium text-muted-foreground w-20">
+                    货币
+                  </th>
+                  <th className="w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {lines.map((line, index) => {
+                  const account = accountMap.get(line.accountId);
+                  return (
+                    <tr key={line.key} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-muted-foreground text-xs">{index + 1}</td>
+                      <td className="px-4 py-2">
+                        <select
+                          className="w-full h-8 text-sm rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                          value={line.accountId}
+                          onChange={(e) => updateLine(line.key, "accountId", e.target.value)}
+                        >
+                          <option value="">-- 选择科目 --</option>
+                          {accounts.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.code} {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Input
+                          className="h-8 text-sm"
+                          placeholder="行摘要（可选）"
+                          value={line.description}
+                          onChange={(e) => updateLine(line.key, "description", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <Input
+                          className="h-8 text-sm text-right font-mono"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={line.debitAmount}
+                          onChange={(e) => updateLine(line.key, "debitAmount", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <Input
+                          className="h-8 text-sm text-right font-mono"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={line.creditAmount}
+                          onChange={(e) => updateLine(line.key, "creditAmount", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <select
+                          className="w-full h-8 text-sm rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                          value={line.currency}
+                          onChange={(e) => updateLine(line.key, "currency", e.target.value)}
+                        >
+                          {currencies.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500"
+                          onClick={() => removeLine(line.key)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t bg-gray-50">
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-sm font-medium text-right">
+                    合计
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">
+                    {formatAmount(totalDebit)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">
+                    {formatAmount(totalCredit)}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 平衡状态 */}
+      <div
+        className={`flex items-center gap-2 px-4 py-3 rounded-md text-sm ${
+          isBalanced
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : totalDebit.gt(0) || totalCredit.gt(0)
+            ? "bg-red-50 text-red-700 border border-red-200"
+            : "bg-gray-50 text-gray-500 border border-gray-200"
+        }`}
+      >
+        {isBalanced ? (
+          <>
+            <CheckCircle2 className="h-4 w-4" />
+            借贷平衡，可以保存
+          </>
+        ) : totalDebit.gt(0) || totalCredit.gt(0) ? (
+          <>
+            <AlertCircle className="h-4 w-4" />
+            借贷不平衡，差额：{formatAmount(diff.abs())}（
+            {diff.gt(0) ? "借方多" : "贷方多"}）
+          </>
+        ) : (
+          <>
+            <AlertCircle className="h-4 w-4" />
+            请录入凭证明细
+          </>
+        )}
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-3 justify-end">
+        <Button variant="outline" onClick={() => router.back()}>
+          取消
+        </Button>
+        <Button
+          variant="outline"
+          disabled={isPending || !description.trim() || !periodId}
+          onClick={() => handleSubmit("draft")}
+        >
+          保存草稿
+        </Button>
+        <Button
+          disabled={isPending || !isBalanced}
+          onClick={() => handleSubmit("submit")}
+        >
+          提交审批
+        </Button>
+      </div>
+    </div>
+  );
+}
