@@ -13,6 +13,7 @@ import {
   Receipt,
   Scale,
   TrendingUp,
+  Waves,
 } from "lucide-react";
 
 interface NavItem {
@@ -58,6 +59,11 @@ const navItems: NavItem[] = [
     href: "/reports/income-statement",
     label: "利润表",
     icon: Receipt,
+  },
+  {
+    href: "/reports/cash-flow",
+    label: "现金流量表",
+    icon: Waves,
   },
 ];
 
