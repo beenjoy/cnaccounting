@@ -123,7 +123,7 @@ export function IncomeStatementReport({
 
   // 渲染行辅助
   const ColHeader = () => (
-    <div className="grid grid-cols-[1fr_120px_120px] gap-2 py-1.5 px-2 border-b-2 border-gray-400 text-xs font-bold text-gray-600 bg-gray-50">
+    <div className="grid grid-cols-[1fr_90px_90px] gap-2 py-1.5 px-2 border-b-2 border-gray-400 text-xs font-bold text-gray-600 bg-gray-50">
       <span>项目</span>
       <span className="text-right">本期数</span>
       <span className="text-right">本年累计数</span>
@@ -131,7 +131,7 @@ export function IncomeStatementReport({
   );
 
   const SectionHeader = ({ label, deduction = false }: { label: string; deduction?: boolean }) => (
-    <div className="grid grid-cols-[1fr_120px_120px] gap-2 py-1 px-2 mt-2">
+    <div className="grid grid-cols-[1fr_90px_90px] gap-2 py-1 px-2 mt-2">
       <span className={`text-xs font-semibold uppercase tracking-wide ${deduction ? "text-orange-700" : "text-blue-700"}`}>
         {deduction ? `减：${label}` : `${label}`}
       </span>
@@ -139,7 +139,7 @@ export function IncomeStatementReport({
   );
 
   const DetailRow = ({ acc }: { acc: AccountBalance }) => (
-    <div className="grid grid-cols-[1fr_120px_120px] gap-2 py-0.5 px-2 hover:bg-gray-50 rounded text-sm">
+    <div className="grid grid-cols-[1fr_90px_90px] gap-2 py-0.5 px-2 hover:bg-gray-50 rounded text-sm">
       <span className="text-gray-600 pl-4">
         <span className="font-mono text-xs text-gray-400 mr-2">{acc.accountCode}</span>
         {acc.accountName}
@@ -154,7 +154,7 @@ export function IncomeStatementReport({
   );
 
   const SubtotalRow = ({ label, current, ytd, indent = false }: { label: string; current: number; ytd: number; indent?: boolean }) => (
-    <div className={`grid grid-cols-[1fr_120px_120px] gap-2 py-1 px-2 border-t border-gray-200 text-sm font-medium ${indent ? "pl-4" : ""}`}>
+    <div className={`grid grid-cols-[1fr_90px_90px] gap-2 py-1 px-2 border-t border-gray-200 text-sm font-medium ${indent ? "pl-4" : ""}`}>
       <span className="text-gray-700">{label}</span>
       <span className={`text-right font-mono tabular-nums ${current < 0 ? "text-red-500" : "text-gray-900"}`}>
         {formatAmount(current)}
@@ -179,7 +179,7 @@ export function IncomeStatementReport({
     isNet?: boolean;
   }) => (
     <div
-      className={`grid grid-cols-[1fr_120px_120px] gap-2 py-1.5 px-2 border-t-2 border-gray-400 text-sm font-semibold ${
+      className={`grid grid-cols-[1fr_90px_90px] gap-2 py-1.5 px-2 border-t-2 border-gray-400 text-sm font-semibold ${
         highlight ? (isNet && current >= 0 ? "bg-green-50" : isNet ? "bg-red-50" : "bg-blue-50") : ""
       }`}
     >
@@ -251,7 +251,8 @@ export function IncomeStatementReport({
               {selectedPeriodId ? "该期间暂无已过账收入/费用凭证" : "请选择会计期间"}
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+            <div className="border rounded-lg overflow-hidden min-w-[500px]">
               <ColHeader />
 
               {/* ① 营业收入 */}
@@ -356,7 +357,7 @@ export function IncomeStatementReport({
               {/* 未分类收入/费用 */}
               {uncategorized.length > 0 && (
                 <>
-                  <div className="grid grid-cols-[1fr_120px_120px] gap-2 py-1 px-2 mt-2">
+                  <div className="grid grid-cols-[1fr_90px_90px] gap-2 py-1 px-2 mt-2">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                       其他未分类项目
                     </span>
@@ -366,6 +367,7 @@ export function IncomeStatementReport({
                   ))}
                 </>
               )}
+            </div>
             </div>
           )}
         </CardContent>
