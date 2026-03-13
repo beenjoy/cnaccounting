@@ -71,3 +71,39 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* 打印样式：隐藏导航/操作区，只保留报表内容 */
+@media print {
+  /* 隐藏导航栏、顶部栏、操作控件 */
+  header,
+  nav,
+  aside,
+  [data-sidebar],
+  .no-print {
+    display: none !important;
+  }
+
+  /* 主内容区域全宽 */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* 报表卡片去除阴影和圆角 */
+  .print-report {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* 页边距 */
+  @page {
+    margin: 1.5cm 1cm;
+    size: A4 portrait;
+  }
+
+  body {
+    font-size: 11pt;
+    color: #000;
+  }
+}

@@ -162,7 +162,7 @@ export function CashFlowReport({
   return (
     <div className="space-y-4">
       {/* 期间选择器 */}
-      <Card>
+      <Card className="no-print">
         <CardContent className="pt-4">
           <div className="flex items-center gap-4 flex-wrap">
             <label className="text-sm font-medium">选择期间：</label>
@@ -196,6 +196,12 @@ export function CashFlowReport({
                 {autoClassifiedCount} 笔自动归类
               </Badge>
             )}
+            <button
+              onClick={() => window.print()}
+              className="ml-auto text-sm px-3 py-1.5 rounded-md border border-input bg-background hover:bg-accent transition-colors"
+            >
+              🖨 打印 / 导出 PDF
+            </button>
           </div>
         </CardContent>
       </Card>

@@ -47,6 +47,7 @@ type LineItem = {
   debitAmount: string;
   creditAmount: string;
   currency: string;
+  exchangeRate: string;
 };
 
 interface JournalEntryFormProps {
@@ -55,6 +56,8 @@ interface JournalEntryFormProps {
   accounts: Account[];
   currencies: Currency[];
   defaultPeriodId?: string;
+  exchangeRates?: Record<string, string>;
+  functionalCurrency?: string;
 }
 
 const emptyLine = (): LineItem => ({
@@ -64,6 +67,7 @@ const emptyLine = (): LineItem => ({
   debitAmount: "",
   creditAmount: "",
   currency: "CNY",
+  exchangeRate: "1",
 });
 
 export function JournalEntryForm({
@@ -72,6 +76,8 @@ export function JournalEntryForm({
   accounts,
   currencies,
   defaultPeriodId,
+  exchangeRates = {},
+  functionalCurrency = "CNY",
 }: JournalEntryFormProps) {
   const router = useRouter();
   const [description, setDescription] = useState("");
@@ -129,11 +135,19 @@ export function JournalEntryForm({
           } else if (field === "creditAmount" && value !== "") {
             updated.debitAmount = "";
           }
+          // 切换货币时自动填入最新汇率
+          if (field === "currency") {
+            if (value === functionalCurrency) {
+              updated.exchangeRate = "1";
+            } else {
+              updated.exchangeRate = exchangeRates[value] ?? "1";
+            }
+          }
           return updated;
         })
       );
     },
-    []
+    [exchangeRates, functionalCurrency]
   );
 
   const handleSubmit = async (action: "draft" | "submit") => {
@@ -180,6 +194,7 @@ export function JournalEntryForm({
             debitAmount: l.debitAmount || "0",
             creditAmount: l.creditAmount || "0",
             currency: l.currency,
+            exchangeRate: l.exchangeRate || "1",
           })),
         }),
       });
@@ -369,6 +384,28 @@ export function JournalEntryForm({
                             </option>
                           ))}
                         </select>
+                        {line.currency !== functionalCurrency && (
+                          <div className="mt-1 space-y-0.5">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">汇率</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.0001"
+                                className="w-16 h-5 text-xs rounded border border-input bg-background px-1 font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                                value={line.exchangeRate}
+                                onChange={(e) => updateLine(line.key, "exchangeRate", e.target.value)}
+                              />
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              ≈{" "}
+                              {new Decimal(line.debitAmount || line.creditAmount || "0")
+                                .times(new Decimal(line.exchangeRate || "1"))
+                                .toFixed(2)}{" "}
+                              {functionalCurrency}
+                            </div>
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <Button

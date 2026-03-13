@@ -23,7 +23,7 @@ interface HeaderProps {
 
 export function Header({ user, organizationName, companyName }: HeaderProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-14 border-b bg-white flex items-center px-4 gap-4">
+    <header className="no-print fixed top-0 left-0 right-0 z-40 h-14 border-b bg-white flex items-center px-4 gap-4">
       {/* Logo + 组织名称 */}
       <div className="flex items-center gap-2 min-w-[240px]">
         <Building2 className="h-6 w-6 text-blue-600" />

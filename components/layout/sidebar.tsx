@@ -76,7 +76,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-14 z-30 h-[calc(100vh-3.5rem)] w-60 border-r bg-slate-900 text-slate-100 overflow-y-auto">
+    <aside className="no-print fixed left-0 top-14 z-30 h-[calc(100vh-3.5rem)] w-60 border-r bg-slate-900 text-slate-100 overflow-y-auto">
       <div className="flex flex-col h-full py-4">
         {/* 主导航 */}
         <nav className="flex-1 px-3 space-y-1">

@@ -203,8 +203,8 @@ export function IncomeStatementReport({
 
   return (
     <div className="space-y-4">
-      {/* 期间选择器 */}
-      <Card>
+      {/* 期间选择器 + 打印按钮 */}
+      <Card className="no-print">
         <CardContent className="pt-4">
           <div className="flex items-center gap-4 flex-wrap">
             <label className="text-sm font-medium">选择期间：</label>
@@ -232,6 +232,12 @@ export function IncomeStatementReport({
                 本期净利润：{formatAmount(netProfit.current)}
               </span>
             )}
+            <button
+              onClick={() => window.print()}
+              className="ml-auto text-sm px-3 py-1.5 rounded-md border border-input bg-background hover:bg-accent transition-colors"
+            >
+              🖨 打印 / 导出 PDF
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -245,13 +251,13 @@ export function IncomeStatementReport({
           </p>
           <p className="text-xs text-center text-muted-foreground">单位：元</p>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent className="p-0 overflow-x-auto">
           {!hasData ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground px-4">
               {selectedPeriodId ? "该期间暂无已过账收入/费用凭证" : "请选择会计期间"}
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden overflow-x-auto min-w-[500px]">
+            <div className="border-t min-w-[500px]">
               <ColHeader />
 
               {/* ① 营业收入 */}

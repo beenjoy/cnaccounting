@@ -157,7 +157,7 @@ export function BalanceSheetReport({
   return (
     <div className="space-y-4">
       {/* 期间选择 + 平衡验证 */}
-      <Card>
+      <Card className="no-print">
         <CardContent className="pt-4">
           <div className="flex items-center gap-4 flex-wrap">
             <label className="text-sm font-medium">选择期间：</label>
@@ -179,6 +179,12 @@ export function BalanceSheetReport({
                 {isBalanced ? "✓ 资产 = 负债 + 权益" : "✗ 报表不平衡，请检查数据"}
               </Badge>
             )}
+            <button
+              onClick={() => window.print()}
+              className="ml-auto text-sm px-3 py-1.5 rounded-md border border-input bg-background hover:bg-accent transition-colors"
+            >
+              🖨 打印 / 导出 PDF
+            </button>
           </div>
         </CardContent>
       </Card>
