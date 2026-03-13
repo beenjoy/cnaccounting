@@ -30,6 +30,8 @@ type Period = {
   id: string;
   name: string;
   year: number;
+  periodNumber: number;
+  status: "OPEN" | "CLOSED";
 };
 
 type Currency = {
@@ -76,6 +78,21 @@ export function JournalEntryForm({
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [periodId, setPeriodId] = useState(defaultPeriodId || openPeriods[0]?.id || "");
   const [reference, setReference] = useState("");
+
+  const selectedPeriod = openPeriods.find((p) => p.id === periodId);
+  const isPeriodClosed = selectedPeriod?.status === "CLOSED";
+
+  const handleDateChange = (date: string) => {
+    setEntryDate(date);
+    if (!date) return;
+    const d = new Date(date + "T00:00:00");
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const matched =
+      openPeriods.find((p) => p.year === year && p.periodNumber === month && p.status === "OPEN") ??
+      openPeriods.find((p) => p.year === year && p.periodNumber === month);
+    if (matched) setPeriodId(matched.id);
+  };
   const [lines, setLines] = useState<LineItem[]>([emptyLine(), emptyLine()]);
   const [isPending, setIsPending] = useState(false);
 
@@ -208,23 +225,41 @@ export function JournalEntryForm({
                 id="entryDate"
                 type="date"
                 value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
+                onChange={(e) => handleDateChange(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
               <Label>会计期间 *</Label>
-              <Select value={periodId} onValueChange={setPeriodId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择期间" />
-                </SelectTrigger>
-                <SelectContent>
-                  {openPeriods.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={periodId} onValueChange={setPeriodId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="选择期间" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {openPeriods.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          {p.name}
+                          {p.status === "CLOSED" && (
+                            <span className="text-xs text-orange-500 font-medium">已关闭</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPeriod && (
+                  <span
+                    className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${
+                      isPeriodClosed
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {isPeriodClosed ? "已关闭" : "开放"}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="reference">参考号</Label>
@@ -368,6 +403,17 @@ export function JournalEntryForm({
         </CardContent>
       </Card>
 
+      {/* 期间已关闭警告 */}
+      {isPeriodClosed && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-md text-sm bg-orange-50 text-orange-700 border border-orange-200">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            所选期间「{selectedPeriod?.name}」已关闭，草稿可保存，但<strong>无法提交审批</strong>。
+            如需过账，请先到「会计期间」页面重开该期间。
+          </span>
+        </div>
+      )}
+
       {/* 平衡状态 */}
       <div
         className={`flex items-center gap-2 px-4 py-3 rounded-md text-sm ${
@@ -410,7 +456,7 @@ export function JournalEntryForm({
           保存草稿
         </Button>
         <Button
-          disabled={isPending || !isBalanced}
+          disabled={isPending || !isBalanced || isPeriodClosed}
           onClick={() => handleSubmit("submit")}
         >
           提交审批

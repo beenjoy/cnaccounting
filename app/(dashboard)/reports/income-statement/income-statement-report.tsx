@@ -251,8 +251,7 @@ export function IncomeStatementReport({
               {selectedPeriodId ? "该期间暂无已过账收入/费用凭证" : "请选择会计期间"}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-            <div className="border rounded-lg overflow-hidden min-w-[500px]">
+            <div className="border rounded-lg overflow-hidden overflow-x-auto min-w-[500px]">
               <ColHeader />
 
               {/* ① 营业收入 */}
@@ -367,7 +366,6 @@ export function IncomeStatementReport({
                   ))}
                 </>
               )}
-            </div>
             </div>
           )}
         </CardContent>
