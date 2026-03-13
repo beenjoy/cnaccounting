@@ -3,13 +3,24 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
-const schema = z.object({
+const createSchema = z.object({
+  mode: z.literal("create"),
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
   organizationName: z.string().min(2),
   companyName: z.string().min(2),
 });
+
+const joinSchema = z.object({
+  mode: z.literal("join"),
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+  inviteCode: z.string().min(1),
+});
+
+const schema = z.discriminatedUnion("mode", [createSchema, joinSchema]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,15 +31,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "输入数据无效" }, { status: 400 });
     }
 
-    const { name, email, password, organizationName, companyName } = parsed.data;
+    const data = parsed.data;
 
     // 检查邮箱是否已注册
-    const existing = await db.user.findUnique({ where: { email } });
+    const existing = await db.user.findUnique({ where: { email: data.email } });
     if (existing) {
       return NextResponse.json({ error: "该邮箱已被注册" }, { status: 400 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(data.password, 12);
+
+    if (data.mode === "join") {
+      // 加入已有组织
+      const org = await db.organization.findUnique({ where: { inviteCode: data.inviteCode } });
+      if (!org) {
+        return NextResponse.json({ error: "邀请码无效，请确认后重试" }, { status: 400 });
+      }
+
+      const user = await db.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: { name: data.name, email: data.email, password: hashedPassword },
+        });
+        await tx.organizationMember.create({
+          data: { userId: newUser.id, organizationId: org.id, role: "ACCOUNTANT" },
+        });
+        return newUser;
+      });
+
+      return NextResponse.json({ success: true, userId: user.id });
+    }
+
+    // 创建新组织
+    const { name, email: _email, password: _pw, organizationName, companyName } = data;
 
     // 生成唯一 slug
     const baseSlug = organizationName
@@ -43,29 +77,18 @@ export async function POST(req: NextRequest) {
       slug = `${baseSlug}-${counter++}`;
     }
 
-    // 生成公司代码
     const companyCode = `COMP-${Date.now()}`;
 
-    // 事务：创建用户、组织、成员关系、公司
     const user = await db.$transaction(async (tx) => {
       const newUser = await tx.user.create({
-        data: {
-          name,
-          email,
-          password: hashedPassword,
-        },
+        data: { name, email: data.email, password: hashedPassword },
       });
 
       const org = await tx.organization.create({
         data: {
           name: organizationName,
           slug,
-          members: {
-            create: {
-              userId: newUser.id,
-              role: "OWNER",
-            },
-          },
+          members: { create: { userId: newUser.id, role: "OWNER" } },
         },
       });
 
@@ -76,7 +99,6 @@ export async function POST(req: NextRequest) {
         update: {},
       });
 
-      // 创建公司
       const company = await tx.company.create({
         data: {
           organizationId: org.id,
@@ -86,7 +108,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 初始化当前年度的会计期间
       const currentYear = new Date().getFullYear();
       const fiscalYear = await tx.fiscalYear.create({
         data: {
@@ -117,7 +138,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // 初始化标准科目表（简化版）
       await initDefaultChartOfAccounts(tx, company.id);
 
       return newUser;

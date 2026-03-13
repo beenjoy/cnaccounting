@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { InviteCodeCard } from "./invite-code-card";
 
 export default async function OrganizationSettingsPage() {
   const session = await auth();
@@ -22,6 +23,7 @@ export default async function OrganizationSettingsPage() {
   if (!membership) redirect("/onboarding");
 
   const org = membership.organization;
+  const canSeeInviteCode = membership.role === "OWNER" || membership.role === "ADMIN";
 
   const roleLabel: Record<string, string> = {
     OWNER: "所有者",
@@ -57,6 +59,8 @@ export default async function OrganizationSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {canSeeInviteCode && <InviteCodeCard inviteCode={org.inviteCode} />}
 
       <Card>
         <CardHeader>

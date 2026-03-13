@@ -39,14 +39,11 @@ export function JournalActions({
 
   const canApprove =
     status === "PENDING_APPROVAL" &&
-    ["OWNER", "ADMIN"].includes(userRole) &&
     createdById !== currentUserId;
 
-  const canPost =
-    status === "APPROVED" && ["OWNER", "ADMIN"].includes(userRole);
+  const canPost = status === "APPROVED";
 
-  const canReverse =
-    status === "POSTED" && ["OWNER", "ADMIN"].includes(userRole);
+  const canReverse = status === "POSTED";
 
   const actionConfig = {
     approve: {
