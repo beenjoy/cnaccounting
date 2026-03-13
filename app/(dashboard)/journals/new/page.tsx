@@ -15,12 +15,9 @@ export default async function NewJournalPage() {
   const company = membership?.organization.companies[0];
   if (!company) redirect("/settings/companies");
 
-  // 获取开放的期间
+  // 获取所有期间（含已关闭，供日期匹配和状态提示）
   const openPeriods = await db.fiscalPeriod.findMany({
-    where: {
-      status: "OPEN",
-      fiscalYear: { companyId: company.id, isClosed: false },
-    },
+    where: { fiscalYear: { companyId: company.id, isClosed: false } },
     include: { fiscalYear: true },
     orderBy: [{ fiscalYear: { year: "asc" } }, { periodNumber: "asc" }],
   });
@@ -37,12 +34,29 @@ export default async function NewJournalPage() {
     orderBy: { code: "asc" },
   });
 
-  // 找当前月份对应的期间
+  // 获取最新汇率（各外币 → 本位币 CNY），构建 { USD: "7.12", EUR: "7.85" } 映射
+  const latestRates = await db.exchangeRate.findMany({
+    where: { toCurrency: company.functionalCurrency },
+    orderBy: { effectiveDate: "desc" },
+  });
+  const exchangeRateMap: Record<string, string> = {};
+  for (const r of latestRates) {
+    if (!exchangeRateMap[r.fromCurrency]) {
+      exchangeRateMap[r.fromCurrency] = r.rate.toString();
+    }
+  }
+
+  // 找当前月份对应的期间（优先 OPEN，其次任意）
   const now = new Date();
   const currentPeriod = openPeriods.find(
+    (p) =>
+      p.fiscalYear.year === now.getFullYear() &&
+      p.periodNumber === now.getMonth() + 1 &&
+      p.status === "OPEN"
+  ) ?? openPeriods.find(
     (p) => p.fiscalYear.year === now.getFullYear() && p.periodNumber === now.getMonth() + 1
   );
-  const defaultPeriodId = currentPeriod?.id ?? openPeriods[0]?.id;
+  const defaultPeriodId = currentPeriod?.id ?? openPeriods.find((p) => p.status === "OPEN")?.id ?? openPeriods[0]?.id;
 
   return (
     <div className="space-y-6">
@@ -57,6 +71,8 @@ export default async function NewJournalPage() {
           id: p.id,
           name: p.name,
           year: p.fiscalYear.year,
+          periodNumber: p.periodNumber,
+          status: p.status as "OPEN" | "CLOSED",
         }))}
         accounts={accounts.map((a) => ({
           id: a.id,
@@ -70,6 +86,8 @@ export default async function NewJournalPage() {
           name: c.name,
           symbol: c.symbol,
         }))}
+        exchangeRates={exchangeRateMap}
+        functionalCurrency={company.functionalCurrency}
       />
     </div>
   );

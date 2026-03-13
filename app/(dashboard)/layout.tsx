@@ -42,8 +42,8 @@ export default async function DashboardLayout({
         companyName={company?.name}
       />
       <Sidebar />
-      <main className="ml-60 pt-14 min-h-screen">
-        <div className="p-6">{children}</div>
+      <main className="ml-60 pt-14 min-h-screen print:ml-0 print:pt-0">
+        <div className="p-6 print:p-0">{children}</div>
       </main>
     </div>
   );
