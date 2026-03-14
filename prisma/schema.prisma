@@ -107,6 +107,19 @@ enum APInvoiceStatus {
   CANCELLED   // 已作废
 }
 
+enum VATDirection {
+  SALES     // 销项（输出税）
+  PURCHASE  // 进项（输入税）
+}
+
+enum VATInvoiceType {
+  SPECIAL_VAT      // 增值税专用发票（可抵扣）
+  GENERAL_VAT      // 增值税普通发票（不可抵扣）
+  ELECTRONIC_VAT   // 电子普通发票
+  TOLL_ROAD        // 通行费发票
+  OTHER            // 其他
+}
+
 enum PaymentTerms {
   NET_30      // 30天
   NET_60      // 60天
@@ -291,6 +304,8 @@ model Company {
   vendors          Vendor[]
   arInvoices       ARInvoice[]
   apInvoices       APInvoice[]
+  vatConfig        VATConfig?
+  vatRecords       VATRecord[]
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -404,6 +419,7 @@ model FiscalPeriod {
 
   fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
   journalEntries JournalEntry[]
+  vatRecords   VATRecord[]
 
   @@unique([fiscalYearId, periodNumber])
   @@map("fiscal_periods")
@@ -677,4 +693,55 @@ model APMatching {
   @@index([apInvoiceId])
   @@index([journalEntryLineId])
   @@map("ap_matchings")
+}
+
+// ============================================================
+// 增值税管理（Phase 4）
+// ============================================================
+
+// 公司增值税配置（每公司一条）
+model VATConfig {
+  id                  String   @id @default(cuid())
+  companyId           String   @unique
+  taxpayerType        VATType  @default(GENERAL_TAXPAYER)
+  standardRate        Decimal  @default(0.13) @db.Decimal(5, 4)  // 标准税率 13%
+  reducedRates        Json?    // [0.09, 0.06, 0.03] 简易征收等
+  urbanMaintenanceRate Decimal @default(0.07) @db.Decimal(5, 4)  // 城建税率
+  educationSurcharge  Decimal  @default(0.03) @db.Decimal(5, 4)  // 教育费附加
+  localEducation      Decimal  @default(0.02) @db.Decimal(5, 4)  // 地方教育附加
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("vat_configs")
+}
+
+// 进销项凭证台账
+model VATRecord {
+  id             String         @id @default(cuid())
+  companyId      String
+  fiscalPeriodId String?        // 所属会计期间（申报月）
+  direction      VATDirection   // SALES / PURCHASE
+  invoiceType    VATInvoiceType @default(SPECIAL_VAT)
+  invoiceNumber  String         // 发票号
+  invoiceDate    DateTime       @db.Date
+  counterparty   String         // 购方/销方名称
+  counterpartyTaxId String?     // 对方税号
+  amount         Decimal        @db.Decimal(20, 2)  // 不含税金额
+  taxRate        Decimal        @db.Decimal(5, 4)   // 税率
+  taxAmount      Decimal        @db.Decimal(20, 2)  // 税额
+  deductible     Boolean        @default(true)      // 是否可抵扣（进项）
+  journalEntryId String?        // 关联凭证
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalPeriod FiscalPeriod? @relation(fields: [fiscalPeriodId], references: [id])
+
+  @@index([companyId, direction])
+  @@index([companyId, fiscalPeriodId])
+  @@index([invoiceDate])
+  @@map("vat_records")
 }
