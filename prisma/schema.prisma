@@ -89,6 +89,32 @@ enum PolicyAction {
   YEAR_END_CLOSE  // 年末结账
 }
 
+enum ARInvoiceStatus {
+  DRAFT       // 草稿
+  OPEN        // 待收款（已开具，未全额核销）
+  PARTIAL     // 部分核销
+  PAID        // 已全额核销
+  OVERDUE     // 逾期
+  CANCELLED   // 已作废
+}
+
+enum APInvoiceStatus {
+  DRAFT       // 草稿
+  OPEN        // 待付款
+  PARTIAL     // 部分核销
+  PAID        // 已全额核销
+  OVERDUE     // 逾期
+  CANCELLED   // 已作废
+}
+
+enum PaymentTerms {
+  NET_30      // 30天
+  NET_60      // 60天
+  NET_90      // 90天
+  IMMEDIATE   // 即期
+  CUSTOM      // 自定义
+}
+
 enum ReportCategory {
   // 资产负债表 - 资产
   CURRENT_ASSET         // 流动资产
@@ -261,6 +287,10 @@ model Company {
   fiscalYears      FiscalYear[]
   journalEntries   JournalEntry[]
   auditLogs        AuditLog[]
+  customers        Customer[]
+  vendors          Vendor[]
+  arInvoices       ARInvoice[]
+  apInvoices       APInvoice[]
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -438,6 +468,8 @@ model JournalEntryLine {
 
   journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account        ChartOfAccount @relation(fields: [accountId], references: [id])
+  arMatchings    ARMatching[]
+  apMatchings    APMatching[]
 
   @@index([journalEntryId])
   @@index([accountId])
@@ -490,4 +522,159 @@ model RolePolicy {
   @@unique([organizationId, role, resource, companyScope])
   @@index([organizationId, role])
   @@map("role_policies")
+}
+
+// ============================================================
+// AR/AP 应收应付管理（Phase 3）
+// ============================================================
+
+model Customer {
+  id            String   @id @default(cuid())
+  companyId     String
+  code          String   // 客户编码
+  name          String   // 客户名称
+  taxId         String?  // 统一社会信用代码 / 税号
+  contactName   String?
+  phone         String?
+  email         String?
+  address       String?
+  currency      String   @default("CNY") // 结算币种
+  creditLimit   Decimal  @default(0) @db.Decimal(20, 2) // 信用额度
+  paymentTerms  PaymentTerms @default(NET_30)
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  arInvoices ARInvoice[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("customers")
+}
+
+model Vendor {
+  id            String   @id @default(cuid())
+  companyId     String
+  code          String   // 供应商编码
+  name          String   // 供应商名称
+  taxId         String?  // 税号
+  contactName   String?
+  phone         String?
+  email         String?
+  address       String?
+  currency      String   @default("CNY")
+  paymentTerms  PaymentTerms @default(NET_30)
+  bankAccount   String?  // 银行账号
+  bankName      String?  // 开户行
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  apInvoices APInvoice[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("vendors")
+}
+
+model ARInvoice {
+  id             String          @id @default(cuid())
+  companyId      String
+  customerId     String
+  invoiceNumber  String          // 发票号
+  invoiceDate    DateTime        @db.Date
+  dueDate        DateTime        @db.Date
+  currency       String          @default("CNY")
+  exchangeRate   Decimal         @default(1) @db.Decimal(18, 6)
+  subtotal       Decimal         @db.Decimal(20, 2) // 不含税金额
+  taxAmount      Decimal         @default(0) @db.Decimal(20, 2) // 税额
+  totalAmount    Decimal         @db.Decimal(20, 2) // 含税总额
+  paidAmount     Decimal         @default(0) @db.Decimal(20, 2) // 已核销金额
+  status         ARInvoiceStatus @default(DRAFT)
+  description    String?
+  journalEntryId String?         // 关联的过账凭证
+  fiscalPeriodId String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  matchings    ARMatching[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([customerId])
+  @@index([dueDate])
+  @@map("ar_invoices")
+}
+
+model APInvoice {
+  id             String          @id @default(cuid())
+  companyId      String
+  vendorId       String
+  invoiceNumber  String          // 发票号
+  invoiceDate    DateTime        @db.Date
+  dueDate        DateTime        @db.Date
+  currency       String          @default("CNY")
+  exchangeRate   Decimal         @default(1) @db.Decimal(18, 6)
+  subtotal       Decimal         @db.Decimal(20, 2)
+  taxAmount      Decimal         @default(0) @db.Decimal(20, 2)
+  totalAmount    Decimal         @db.Decimal(20, 2)
+  paidAmount     Decimal         @default(0) @db.Decimal(20, 2)
+  status         APInvoiceStatus @default(DRAFT)
+  description    String?
+  journalEntryId String?
+  fiscalPeriodId String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vendor     Vendor       @relation(fields: [vendorId], references: [id])
+  matchings  APMatching[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([vendorId])
+  @@index([dueDate])
+  @@map("ap_invoices")
+}
+
+// AR 核销记录：将收款凭证行与 AR 发票关联
+model ARMatching {
+  id                   String   @id @default(cuid())
+  arInvoiceId          String
+  journalEntryLineId   String   // 关联的收款凭证行（借方应收科目归零）
+  matchedAmount        Decimal  @db.Decimal(20, 2)
+  matchedDate          DateTime @db.Date
+  notes                String?
+  createdAt            DateTime @default(now())
+
+  arInvoice        ARInvoice        @relation(fields: [arInvoiceId], references: [id], onDelete: Cascade)
+  journalEntryLine JournalEntryLine @relation(fields: [journalEntryLineId], references: [id])
+
+  @@index([arInvoiceId])
+  @@index([journalEntryLineId])
+  @@map("ar_matchings")
+}
+
+// AP 核销记录：将付款凭证行与 AP 发票关联
+model APMatching {
+  id                   String   @id @default(cuid())
+  apInvoiceId          String
+  journalEntryLineId   String
+  matchedAmount        Decimal  @db.Decimal(20, 2)
+  matchedDate          DateTime @db.Date
+  notes                String?
+  createdAt            DateTime @default(now())
+
+  apInvoice        APInvoice        @relation(fields: [apInvoiceId], references: [id], onDelete: Cascade)
+  journalEntryLine JournalEntryLine @relation(fields: [journalEntryLineId], references: [id])
+
+  @@index([apInvoiceId])
+  @@index([journalEntryLineId])
+  @@map("ap_matchings")
 }
