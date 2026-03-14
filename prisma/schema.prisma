@@ -68,6 +68,27 @@ enum AuditAction {
   CLOSE_PERIOD
 }
 
+enum PolicyResource {
+  JOURNAL_ENTRY      // 日记账凭证
+  CHART_OF_ACCOUNT   // 科目表
+  FISCAL_PERIOD      // 会计期间
+  REPORT             // 财务报表
+  COMPANY            // 公司管理
+  MEMBER             // 成员管理
+  CURRENCY           // 货币汇率
+}
+
+enum PolicyAction {
+  READ
+  CREATE
+  UPDATE
+  DELETE
+  SUBMIT          // 提交审批
+  APPROVE         // 审批过账
+  CLOSE_PERIOD    // 关闭期间
+  YEAR_END_CLOSE  // 年末结账
+}
+
 enum ReportCategory {
   // 资产负债表 - 资产
   CURRENT_ASSET         // 流动资产
@@ -195,8 +216,9 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members     OrganizationMember[]
-  companies   Company[]
+  members      OrganizationMember[]
+  companies    Company[]
+  rolePolicies RolePolicy[]
 
   @@map("organizations")
 }
@@ -447,4 +469,25 @@ model AuditLog {
   @@index([companyId, entityType])
   @@index([userId])
   @@map("audit_logs")
+}
+
+// ============================================================
+// 细粒度权限策略（Phase 2）
+// ============================================================
+
+model RolePolicy {
+  id             String           @id @default(cuid())
+  organizationId String
+  role           MemberRole
+  resource       PolicyResource
+  actions        PolicyAction[]
+  companyScope   String?          // null = 全部公司，否则指定 companyId
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, role, resource, companyScope])
+  @@index([organizationId, role])
+  @@map("role_policies")
 }

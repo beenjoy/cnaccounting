@@ -88,7 +88,8 @@ const navItems: NavItem[] = [
 const settingsItems: NavItem[] = [
   { href: "/settings/organization", label: "组织设置", icon: Building2 },
   { href: "/settings/companies", label: "公司管理", icon: Building2 },
-  { href: "/settings/audit-log", label: "审计日志", icon: ShieldCheck },
+  { href: "/settings/permissions", label: "权限管理", icon: ShieldCheck },
+  { href: "/settings/audit-log", label: "审计日志", icon: Users },
 ];
 
 export function Sidebar() {
