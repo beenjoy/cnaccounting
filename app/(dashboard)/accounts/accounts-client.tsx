@@ -6,7 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus, Pencil, Search } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Search, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -296,14 +297,30 @@ export function AccountsClient({ companyId, initialAccounts }: AccountsClientPro
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEdit(account)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(account)}
+                        className="h-7 w-7 p-0"
+                        title="编辑科目"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      {account.isLeaf && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="h-7 w-7 p-0"
+                          title="查看明细账"
+                        >
+                          <Link href={`/ledger?accountId=${account.id}`}>
+                            <BookOpen className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

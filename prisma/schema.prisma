@@ -92,6 +92,28 @@ enum CashFlowActivity {
   FINANCING  // 筹资活动
 }
 
+enum IndustryType {
+  GENERAL        // 通用
+  MANUFACTURING  // 制造业
+  SERVICE        // 服务业
+  TRADE          // 商贸零售
+  CONSTRUCTION   // 建筑业
+  FINANCE        // 金融业
+}
+
+enum VATType {
+  GENERAL_TAXPAYER  // 一般纳税人（进项可抵扣）
+  SMALL_SCALE       // 小规模纳税人（3%征收率）
+  EXEMPT            // 免税
+}
+
+enum AccountTemplate {
+  GENERAL        // 通用企业
+  MANUFACTURING  // 制造业
+  SERVICE        // 服务业
+  TRADE          // 商贸零售
+}
+
 // ============================================================
 // 用户与认证
 // ============================================================
@@ -195,17 +217,22 @@ model OrganizationMember {
 }
 
 model Company {
-  id               String   @id @default(cuid())
-  organizationId   String
-  name             String
-  code             String
-  legalName        String?
-  taxId            String?
-  functionalCurrency String  @default("CNY") // ISO 4217
-  description      String?
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String          @id @default(cuid())
+  organizationId     String
+  name               String
+  code               String
+  legalName          String?
+  taxId              String?
+  functionalCurrency String          @default("CNY") // ISO 4217
+  description        String?
+  isActive           Boolean         @default(true)
+  industryType       IndustryType    @default(GENERAL)
+  vatType            VATType         @default(GENERAL_TAXPAYER)
+  incomeTaxRate      Decimal         @default(0.25) @db.Decimal(5, 4)
+  surtaxConfig       Json?           // { urbanMaintenance, educationSurcharge, localEducation }
+  accountTemplate    AccountTemplate @default(GENERAL)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   accounts         ChartOfAccount[]

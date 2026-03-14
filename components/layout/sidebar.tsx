@@ -7,12 +7,15 @@ import {
   BookOpen,
   Building2,
   Calendar,
+  ClipboardList,
   DollarSign,
   FileText,
   LayoutDashboard,
   Receipt,
   Scale,
+  ShieldCheck,
   TrendingUp,
+  Users,
   Waves,
 } from "lucide-react";
 
@@ -41,9 +44,19 @@ const navItems: NavItem[] = [
     icon: Calendar,
   },
   {
+    href: "/periods/year-end",
+    label: "年末结账",
+    icon: Calendar,
+  },
+  {
     href: "/currencies",
     label: "货币与汇率",
     icon: DollarSign,
+  },
+  {
+    href: "/ledger",
+    label: "明细账",
+    icon: ClipboardList,
   },
   {
     href: "/reports/trial-balance",
@@ -65,11 +78,17 @@ const navItems: NavItem[] = [
     label: "现金流量表",
     icon: Waves,
   },
+  {
+    href: "/reports/equity-changes",
+    label: "权益变动表",
+    icon: TrendingUp,
+  },
 ];
 
 const settingsItems: NavItem[] = [
   { href: "/settings/organization", label: "组织设置", icon: Building2 },
   { href: "/settings/companies", label: "公司管理", icon: Building2 },
+  { href: "/settings/audit-log", label: "审计日志", icon: ShieldCheck },
 ];
 
 export function Sidebar() {

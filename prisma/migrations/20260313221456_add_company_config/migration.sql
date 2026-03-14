@@ -1,0 +1,15 @@
+-- CreateEnum
+CREATE TYPE "IndustryType" AS ENUM ('GENERAL', 'MANUFACTURING', 'SERVICE', 'TRADE', 'CONSTRUCTION', 'FINANCE');
+
+-- CreateEnum
+CREATE TYPE "VATType" AS ENUM ('GENERAL_TAXPAYER', 'SMALL_SCALE', 'EXEMPT');
+
+-- CreateEnum
+CREATE TYPE "AccountTemplate" AS ENUM ('GENERAL', 'MANUFACTURING', 'SERVICE', 'TRADE');
+
+-- AlterTable
+ALTER TABLE "companies" ADD COLUMN     "accountTemplate" "AccountTemplate" NOT NULL DEFAULT 'GENERAL',
+ADD COLUMN     "incomeTaxRate" DECIMAL(5,4) NOT NULL DEFAULT 0.25,
+ADD COLUMN     "industryType" "IndustryType" NOT NULL DEFAULT 'GENERAL',
+ADD COLUMN     "surtaxConfig" JSONB,
+ADD COLUMN     "vatType" "VATType" NOT NULL DEFAULT 'GENERAL_TAXPAYER';

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { InviteCodeCard } from "./invite-code-card";
+import { MemberRoleSelector } from "./member-role-selector";
 
 export default async function OrganizationSettingsPage() {
   const session = await auth();
@@ -24,6 +25,7 @@ export default async function OrganizationSettingsPage() {
 
   const org = membership.organization;
   const canSeeInviteCode = membership.role === "OWNER" || membership.role === "ADMIN";
+  const canManageRoles = membership.role === "OWNER";
 
   const roleLabel: Record<string, string> = {
     OWNER: "所有者",
@@ -68,17 +70,29 @@ export default async function OrganizationSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {org.members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div>
-                  <p className="text-sm font-medium">{m.user.name || m.user.email}</p>
-                  <p className="text-xs text-muted-foreground">{m.user.email}</p>
+            {org.members.map((m) => {
+              const isSelf = m.userId === session.user!.id;
+              const isOwner = m.role === "OWNER";
+              const showSelector = canManageRoles && !isSelf && !isOwner;
+              return (
+                <div key={m.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {m.user.name || m.user.email}
+                      {isSelf && <span className="ml-2 text-xs text-muted-foreground">（我）</span>}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{m.user.email}</p>
+                  </div>
+                  {showSelector ? (
+                    <MemberRoleSelector memberId={m.id} currentRole={m.role} />
+                  ) : (
+                    <Badge variant={isOwner ? "default" : "secondary"}>
+                      {roleLabel[m.role]}
+                    </Badge>
+                  )}
                 </div>
-                <Badge variant={m.role === "OWNER" ? "default" : "secondary"}>
-                  {roleLabel[m.role]}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
