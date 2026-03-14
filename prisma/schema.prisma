@@ -112,6 +112,31 @@ enum VATDirection {
   PURCHASE  // 进项（输入税）
 }
 
+// ---- Phase 5: Fixed Assets ----
+
+enum AssetCategory {
+  BUILDINGS          // 房屋及建筑物
+  MACHINERY          // 机器设备
+  VEHICLES           // 运输设备
+  ELECTRONICS        // 电子设备
+  OFFICE_FURNITURE   // 办公设备及家具
+  OTHER              // 其他固定资产
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE       // 直线法（年限平均法）
+  DECLINING_BALANCE   // 双倍余额递减法
+  SUM_OF_YEARS        // 年数总和法
+  USAGE_BASED         // 工作量法
+}
+
+enum AssetStatus {
+  ACTIVE              // 在用
+  IDLE                // 停用
+  DISPOSED            // 已处置
+  FULLY_DEPRECIATED   // 已提足折旧
+}
+
 enum VATInvoiceType {
   SPECIAL_VAT      // 增值税专用发票（可抵扣）
   GENERAL_VAT      // 增值税普通发票（不可抵扣）
@@ -306,6 +331,7 @@ model Company {
   apInvoices       APInvoice[]
   vatConfig        VATConfig?
   vatRecords       VATRecord[]
+  fixedAssets      FixedAsset[]
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -374,7 +400,10 @@ model ChartOfAccount {
   company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   parent           ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
   children         ChartOfAccount[]     @relation("AccountHierarchy")
-  journalLines     JournalEntryLine[]
+  journalLines          JournalEntryLine[]
+  assetCostAccounts     FixedAsset[]  @relation("AssetCostAccount")
+  assetAccDepAccounts   FixedAsset[]  @relation("AssetAccDepAccount")
+  assetDepExpAccounts   FixedAsset[]  @relation("AssetDepExpAccount")
 
   @@unique([companyId, code])
   @@index([companyId, accountType])
@@ -417,9 +446,10 @@ model FiscalPeriod {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
-  journalEntries JournalEntry[]
-  vatRecords   VATRecord[]
+  fiscalYear          FiscalYear           @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  journalEntries      JournalEntry[]
+  vatRecords          VATRecord[]
+  depreciationRecords DepreciationRecord[]
 
   @@unique([fiscalYearId, periodNumber])
   @@map("fiscal_periods")
@@ -744,4 +774,69 @@ model VATRecord {
   @@index([companyId, fiscalPeriodId])
   @@index([invoiceDate])
   @@map("vat_records")
+}
+
+// ============================================================
+// 固定资产管理（Phase 5）
+// ============================================================
+
+model FixedAsset {
+  id                      String             @id @default(cuid())
+  companyId               String
+  assetNumber             String             // 资产编号 e.g. FA-2026-00001
+  name                    String             // 资产名称
+  category                AssetCategory      @default(ELECTRONICS)
+  department              String?            // 使用部门（影响折旧费用归属）
+  location                String?            // 存放地点
+  serialNumber            String?            // 序列号/出厂编号
+  acquisitionDate         DateTime           @db.Date  // 入账日期
+  acquisitionCost         Decimal            @db.Decimal(20, 2)  // 原值
+  residualRate            Decimal            @default(0.05) @db.Decimal(5, 4)  // 净残值率
+  usefulLifeMonths        Int                // 预计使用寿命（月）
+  depreciationMethod      DepreciationMethod @default(STRAIGHT_LINE)
+  totalWorkload           Decimal?           @db.Decimal(20, 2)  // 预计总工作量（工作量法）
+  accumulatedDepreciation Decimal            @default(0) @db.Decimal(20, 2)  // 累计折旧
+  impairmentReserve       Decimal            @default(0) @db.Decimal(20, 2)  // 减值准备
+  status                  AssetStatus        @default(ACTIVE)
+  // 关联会计科目
+  costAccountId           String?            // 固定资产原值科目（1601）
+  accDepAccountId         String?            // 累计折旧科目（1602）
+  depExpAccountId         String?            // 折旧费用科目（6601管理/制造/销售）
+  // 处置信息
+  disposalDate            DateTime?          @db.Date
+  disposalAmount          Decimal?           @db.Decimal(20, 2)  // 处置收入
+  disposalNotes           String?
+  journalEntryId          String?            // 入账凭证
+  notes                   String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  costAccount          ChartOfAccount?       @relation("AssetCostAccount", fields: [costAccountId], references: [id])
+  accDepAccount        ChartOfAccount?       @relation("AssetAccDepAccount", fields: [accDepAccountId], references: [id])
+  depExpAccount        ChartOfAccount?       @relation("AssetDepExpAccount", fields: [depExpAccountId], references: [id])
+  depreciationRecords  DepreciationRecord[]
+
+  @@unique([companyId, assetNumber])
+  @@index([companyId, status])
+  @@index([companyId, category])
+  @@map("fixed_assets")
+}
+
+model DepreciationRecord {
+  id             String   @id @default(cuid())
+  assetId        String
+  fiscalPeriodId String
+  amount         Decimal  @db.Decimal(20, 2)  // 本期折旧额
+  workload       Decimal? @db.Decimal(20, 2)  // 本期实际工作量（工作量法）
+  journalEntryId String?  // 关联凭证
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  asset        FixedAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fiscalPeriod FiscalPeriod @relation(fields: [fiscalPeriodId], references: [id])
+
+  @@unique([assetId, fiscalPeriodId])  // 每资产每期只能有一条折旧记录
+  @@index([fiscalPeriodId])
+  @@map("depreciation_records")
 }
