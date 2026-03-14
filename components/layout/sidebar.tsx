@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   Wrench,
   Package,
+  GitMerge,
 } from "lucide-react";
 
 interface NavItem {
@@ -121,6 +122,10 @@ const assetItems: NavItem[] = [
 const vatItems: NavItem[] = [
   { href: "/vat/records", label: "进销项台账", icon: FileBadge },
   { href: "/vat/declaration", label: "增值税申报", icon: ClipboardCheck },
+];
+
+const consolidationItems: NavItem[] = [
+  { href: "/consolidation", label: "合并组管理", icon: GitMerge },
 ];
 
 const settingsItems: NavItem[] = [
@@ -222,6 +227,25 @@ export function Sidebar() {
             增值税
           </p>
           {vatItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link key={item.href} href={item.href}
+                className={cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  isActive ? "bg-slate-700 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white")}>
+                <item.icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* 合并报表 */}
+        <div className="mx-3 my-2 h-px bg-slate-700" />
+        <div className="px-3 space-y-1">
+          <p className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            合并报表
+          </p>
+          {consolidationItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link key={item.href} href={item.href}

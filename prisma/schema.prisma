@@ -177,6 +177,19 @@ enum CashFlowActivity {
   FINANCING  // 筹资活动
 }
 
+// ---- Phase 6: Consolidation ----
+
+enum ConsolidationMethod {
+  FULL         // 全额合并（控股子公司，持股>50%）
+  EQUITY       // 权益法（联营企业，持股20%-50%）
+  COST         // 成本法（持股<20%，无重大影响）
+}
+
+enum ConsolidationMemberType {
+  PARENT       // 母公司
+  SUBSIDIARY   // 子公司
+}
+
 enum IndustryType {
   GENERAL        // 通用
   MANUFACTURING  // 制造业
@@ -280,9 +293,10 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members      OrganizationMember[]
-  companies    Company[]
-  rolePolicies RolePolicy[]
+  members             OrganizationMember[]
+  companies           Company[]
+  rolePolicies        RolePolicy[]
+  consolidationGroups ConsolidationGroup[]
 
   @@map("organizations")
 }
@@ -329,9 +343,11 @@ model Company {
   vendors          Vendor[]
   arInvoices       ARInvoice[]
   apInvoices       APInvoice[]
-  vatConfig        VATConfig?
-  vatRecords       VATRecord[]
-  fixedAssets      FixedAsset[]
+  vatConfig              VATConfig?
+  vatRecords             VATRecord[]
+  fixedAssets            FixedAsset[]
+  consolidationMembers   ConsolidationMember[]
+  counterpartyJournalLines JournalEntryLine[] @relation("IntercompanyCounterparty")
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -508,14 +524,17 @@ model JournalEntryLine {
   // 本位币金额（折算后）
   debitAmountLC    Decimal           @default(0) @db.Decimal(20, 4)
   creditAmountLC   Decimal           @default(0) @db.Decimal(20, 4)
-  cashFlowActivity CashFlowActivity? // 现金流分类（用于现金流量表）
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  cashFlowActivity      CashFlowActivity? // 现金流分类（用于现金流量表）
+  isIntercompany        Boolean           @default(false) // 是否集团内部交易
+  counterpartyCompanyId String?           // 对方集团内公司ID（内部交易标记）
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
-  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  account        ChartOfAccount @relation(fields: [accountId], references: [id])
-  arMatchings    ARMatching[]
-  apMatchings    APMatching[]
+  journalEntry        JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account             ChartOfAccount @relation(fields: [accountId], references: [id])
+  counterpartyCompany Company?       @relation("IntercompanyCounterparty", fields: [counterpartyCompanyId], references: [id])
+  arMatchings         ARMatching[]
+  apMatchings         APMatching[]
 
   @@index([journalEntryId])
   @@index([accountId])
@@ -839,4 +858,44 @@ model DepreciationRecord {
   @@unique([assetId, fiscalPeriodId])  // 每资产每期只能有一条折旧记录
   @@index([fiscalPeriodId])
   @@map("depreciation_records")
+}
+
+// ============================================================
+// 合并报表（Phase 6）
+// ============================================================
+
+model ConsolidationGroup {
+  id                String   @id @default(cuid())
+  organizationId    String
+  name              String   // 合并组名称，e.g. "集团合并报表"
+  description       String?
+  reportingCurrency String   @default("CNY") // 合并报告货币
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ConsolidationMember[]
+
+  @@index([organizationId])
+  @@map("consolidation_groups")
+}
+
+model ConsolidationMember {
+  id                    String                  @id @default(cuid())
+  groupId               String
+  companyId             String
+  memberType            ConsolidationMemberType @default(SUBSIDIARY) // PARENT / SUBSIDIARY
+  ownershipPct          Decimal                 @default(1.0) @db.Decimal(5, 4) // 持股比例 e.g. 0.6 = 60%
+  consolidationMethod   ConsolidationMethod     @default(FULL)
+  investmentAccountCode String?                 // 母公司中的长期股权投资科目编码 e.g. "1511"
+  sortOrder             Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  group   ConsolidationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  company Company            @relation(fields: [companyId], references: [id])
+
+  @@unique([groupId, companyId])
+  @@index([groupId])
+  @@map("consolidation_members")
 }
