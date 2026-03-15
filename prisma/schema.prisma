@@ -69,13 +69,13 @@ enum AuditAction {
 }
 
 enum PolicyResource {
-  JOURNAL_ENTRY      // 日记账凭证
-  CHART_OF_ACCOUNT   // 科目表
-  FISCAL_PERIOD      // 会计期间
-  REPORT             // 财务报表
-  COMPANY            // 公司管理
-  MEMBER             // 成员管理
-  CURRENCY           // 货币汇率
+  JOURNAL_ENTRY // 日记账凭证
+  CHART_OF_ACCOUNT // 科目表
+  FISCAL_PERIOD // 会计期间
+  REPORT // 财务报表
+  COMPANY // 公司管理
+  MEMBER // 成员管理
+  CURRENCY // 货币汇率
 }
 
 enum PolicyAction {
@@ -83,133 +83,133 @@ enum PolicyAction {
   CREATE
   UPDATE
   DELETE
-  SUBMIT          // 提交审批
-  APPROVE         // 审批过账
-  CLOSE_PERIOD    // 关闭期间
-  YEAR_END_CLOSE  // 年末结账
+  SUBMIT // 提交审批
+  APPROVE // 审批过账
+  CLOSE_PERIOD // 关闭期间
+  YEAR_END_CLOSE // 年末结账
 }
 
 enum ARInvoiceStatus {
-  DRAFT       // 草稿
-  OPEN        // 待收款（已开具，未全额核销）
-  PARTIAL     // 部分核销
-  PAID        // 已全额核销
-  OVERDUE     // 逾期
-  CANCELLED   // 已作废
+  DRAFT // 草稿
+  OPEN // 待收款（已开具，未全额核销）
+  PARTIAL // 部分核销
+  PAID // 已全额核销
+  OVERDUE // 逾期
+  CANCELLED // 已作废
 }
 
 enum APInvoiceStatus {
-  DRAFT       // 草稿
-  OPEN        // 待付款
-  PARTIAL     // 部分核销
-  PAID        // 已全额核销
-  OVERDUE     // 逾期
-  CANCELLED   // 已作废
+  DRAFT // 草稿
+  OPEN // 待付款
+  PARTIAL // 部分核销
+  PAID // 已全额核销
+  OVERDUE // 逾期
+  CANCELLED // 已作废
 }
 
 enum VATDirection {
-  SALES     // 销项（输出税）
-  PURCHASE  // 进项（输入税）
+  SALES // 销项（输出税）
+  PURCHASE // 进项（输入税）
 }
 
 // ---- Phase 5: Fixed Assets ----
 
 enum AssetCategory {
-  BUILDINGS          // 房屋及建筑物
-  MACHINERY          // 机器设备
-  VEHICLES           // 运输设备
-  ELECTRONICS        // 电子设备
-  OFFICE_FURNITURE   // 办公设备及家具
-  OTHER              // 其他固定资产
+  BUILDINGS // 房屋及建筑物
+  MACHINERY // 机器设备
+  VEHICLES // 运输设备
+  ELECTRONICS // 电子设备
+  OFFICE_FURNITURE // 办公设备及家具
+  OTHER // 其他固定资产
 }
 
 enum DepreciationMethod {
-  STRAIGHT_LINE       // 直线法（年限平均法）
-  DECLINING_BALANCE   // 双倍余额递减法
-  SUM_OF_YEARS        // 年数总和法
-  USAGE_BASED         // 工作量法
+  STRAIGHT_LINE // 直线法（年限平均法）
+  DECLINING_BALANCE // 双倍余额递减法
+  SUM_OF_YEARS // 年数总和法
+  USAGE_BASED // 工作量法
 }
 
 enum AssetStatus {
-  ACTIVE              // 在用
-  IDLE                // 停用
-  DISPOSED            // 已处置
-  FULLY_DEPRECIATED   // 已提足折旧
+  ACTIVE // 在用
+  IDLE // 停用
+  DISPOSED // 已处置
+  FULLY_DEPRECIATED // 已提足折旧
 }
 
 enum VATInvoiceType {
-  SPECIAL_VAT      // 增值税专用发票（可抵扣）
-  GENERAL_VAT      // 增值税普通发票（不可抵扣）
-  ELECTRONIC_VAT   // 电子普通发票
-  TOLL_ROAD        // 通行费发票
-  OTHER            // 其他
+  SPECIAL_VAT // 增值税专用发票（可抵扣）
+  GENERAL_VAT // 增值税普通发票（不可抵扣）
+  ELECTRONIC_VAT // 电子普通发票
+  TOLL_ROAD // 通行费发票
+  OTHER // 其他
 }
 
 enum PaymentTerms {
-  NET_30      // 30天
-  NET_60      // 60天
-  NET_90      // 90天
-  IMMEDIATE   // 即期
-  CUSTOM      // 自定义
+  NET_30 // 30天
+  NET_60 // 60天
+  NET_90 // 90天
+  IMMEDIATE // 即期
+  CUSTOM // 自定义
 }
 
 enum ReportCategory {
   // 资产负债表 - 资产
-  CURRENT_ASSET         // 流动资产
-  NON_CURRENT_ASSET     // 非流动资产
+  CURRENT_ASSET // 流动资产
+  NON_CURRENT_ASSET // 非流动资产
   // 资产负债表 - 负债
-  CURRENT_LIABILITY     // 流动负债
+  CURRENT_LIABILITY // 流动负债
   NON_CURRENT_LIABILITY // 非流动负债
   // 资产负债表 - 所有者权益
-  EQUITY_ITEM           // 所有者权益项目
+  EQUITY_ITEM // 所有者权益项目
   // 利润表
-  OPERATING_REVENUE     // 营业收入
-  OPERATING_COST        // 营业成本
-  PERIOD_EXPENSE        // 期间费用（销售/管理/财务）
-  NON_OPERATING_INCOME  // 营业外收入
+  OPERATING_REVENUE // 营业收入
+  OPERATING_COST // 营业成本
+  PERIOD_EXPENSE // 期间费用（销售/管理/财务）
+  NON_OPERATING_INCOME // 营业外收入
   NON_OPERATING_EXPENSE // 营业外支出
-  INCOME_TAX            // 所得税费用
+  INCOME_TAX // 所得税费用
 }
 
 enum CashFlowActivity {
-  OPERATING  // 经营活动
-  INVESTING  // 投资活动
-  FINANCING  // 筹资活动
+  OPERATING // 经营活动
+  INVESTING // 投资活动
+  FINANCING // 筹资活动
 }
 
 // ---- Phase 6: Consolidation ----
 
 enum ConsolidationMethod {
-  FULL         // 全额合并（控股子公司，持股>50%）
-  EQUITY       // 权益法（联营企业，持股20%-50%）
-  COST         // 成本法（持股<20%，无重大影响）
+  FULL // 全额合并（控股子公司，持股>50%）
+  EQUITY // 权益法（联营企业，持股20%-50%）
+  COST // 成本法（持股<20%，无重大影响）
 }
 
 enum ConsolidationMemberType {
-  PARENT       // 母公司
-  SUBSIDIARY   // 子公司
+  PARENT // 母公司
+  SUBSIDIARY // 子公司
 }
 
 enum IndustryType {
-  GENERAL        // 通用
-  MANUFACTURING  // 制造业
-  SERVICE        // 服务业
-  TRADE          // 商贸零售
-  CONSTRUCTION   // 建筑业
-  FINANCE        // 金融业
+  GENERAL // 通用
+  MANUFACTURING // 制造业
+  SERVICE // 服务业
+  TRADE // 商贸零售
+  CONSTRUCTION // 建筑业
+  FINANCE // 金融业
 }
 
 enum VATType {
-  GENERAL_TAXPAYER  // 一般纳税人（进项可抵扣）
-  SMALL_SCALE       // 小规模纳税人（3%征收率）
-  EXEMPT            // 免税
+  GENERAL_TAXPAYER // 一般纳税人（进项可抵扣）
+  SMALL_SCALE // 小规模纳税人（3%征收率）
+  EXEMPT // 免税
 }
 
 enum AccountTemplate {
-  GENERAL        // 通用企业
-  MANUFACTURING  // 制造业
-  SERVICE        // 服务业
-  TRADE          // 商贸零售
+  GENERAL // 通用企业
+  MANUFACTURING // 制造业
+  SERVICE // 服务业
+  TRADE // 商贸零售
 }
 
 // ============================================================
@@ -217,22 +217,22 @@ enum AccountTemplate {
 // ============================================================
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String     @unique
   emailVerified DateTime?
   password      String?
   image         String?
   status        UserStatus @default(ACTIVE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  memberships   OrganizationMember[]
-  createdEntries JournalEntry[] @relation("CreatedBy")
-  approvedEntries JournalEntry[] @relation("ApprovedBy")
-  auditLogs     AuditLog[]
+  accounts        Account[]
+  sessions        Session[]
+  memberships     OrganizationMember[]
+  createdEntries  JournalEntry[]       @relation("CreatedBy")
+  approvedEntries JournalEntry[]       @relation("ApprovedBy")
+  auditLogs       AuditLog[]
 
   @@map("users")
 }
@@ -297,20 +297,21 @@ model Organization {
   companies           Company[]
   rolePolicies        RolePolicy[]
   consolidationGroups ConsolidationGroup[]
+  groupAccounts       GroupAccount[]
 
   @@map("organizations")
 }
 
 model OrganizationMember {
-  id             String       @id @default(cuid())
+  id             String     @id @default(cuid())
   organizationId String
   userId         String
-  role           MemberRole   @default(ACCOUNTANT)
-  joinedAt       DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  role           MemberRole @default(ACCOUNTANT)
+  joinedAt       DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
   @@map("organization_members")
@@ -329,26 +330,27 @@ model Company {
   industryType       IndustryType    @default(GENERAL)
   vatType            VATType         @default(GENERAL_TAXPAYER)
   incomeTaxRate      Decimal         @default(0.25) @db.Decimal(5, 4)
-  surtaxConfig       Json?           // { urbanMaintenance, educationSurcharge, localEducation }
+  surtaxConfig       Json? // { urbanMaintenance, educationSurcharge, localEducation }
   accountTemplate    AccountTemplate @default(GENERAL)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  accounts         ChartOfAccount[]
-  fiscalYears      FiscalYear[]
-  journalEntries   JournalEntry[]
-  auditLogs        AuditLog[]
-  customers        Customer[]
-  vendors          Vendor[]
-  arInvoices       ARInvoice[]
-  apInvoices       APInvoice[]
-  vatConfig              VATConfig?
-  vatRecords             VATRecord[]
-  fixedAssets            FixedAsset[]
-  consolidationMembers   ConsolidationMember[]
-  counterpartyJournalLines JournalEntryLine[] @relation("IntercompanyCounterparty")
-  journalTemplates       JournalTemplate[]
+  organization             Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accounts                 ChartOfAccount[]
+  fiscalYears              FiscalYear[]
+  journalEntries           JournalEntry[]
+  auditLogs                AuditLog[]
+  customers                Customer[]
+  vendors                  Vendor[]
+  arInvoices               ARInvoice[]
+  apInvoices               APInvoice[]
+  vatConfig                VATConfig?
+  vatRecords               VATRecord[]
+  fixedAssets              FixedAsset[]
+  consolidationMembers     ConsolidationMember[]
+  counterpartyJournalLines JournalEntryLine[]    @relation("IntercompanyCounterparty")
+  journalTemplates         JournalTemplate[]
+  groupAccountMappings     GroupAccountMapping[]
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -359,14 +361,14 @@ model Company {
 // ============================================================
 
 model Currency {
-  code        String         @id  // ISO 4217 e.g. CNY, USD, EUR
-  name        String
-  nameEn      String?
-  symbol      String
-  decimals    Int            @default(2)
-  status      CurrencyStatus @default(ACTIVE)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  code      String         @id // ISO 4217 e.g. CNY, USD, EUR
+  name      String
+  nameEn    String?
+  symbol    String
+  decimals  Int            @default(2)
+  status    CurrencyStatus @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   exchangeRatesFrom ExchangeRate[] @relation("FromCurrency")
   exchangeRatesTo   ExchangeRate[] @relation("ToCurrency")
@@ -375,17 +377,17 @@ model Currency {
 }
 
 model ExchangeRate {
-  id             String   @id @default(cuid())
-  fromCurrency   String
-  toCurrency     String
-  rate           Decimal  @db.Decimal(20, 10)
-  rateType       String   @default("SPOT") // SPOT, AVERAGE, CLOSING, HISTORICAL
-  effectiveDate  DateTime @db.Date
-  source         String?  // ECB, MANUAL, etc.
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  fromCurrency  String
+  toCurrency    String
+  rate          Decimal  @db.Decimal(20, 10)
+  rateType      String   @default("SPOT") // SPOT, AVERAGE, CLOSING, HISTORICAL
+  effectiveDate DateTime @db.Date
+  source        String? // ECB, MANUAL, etc.
+  createdAt     DateTime @default(now())
 
-  from           Currency @relation("FromCurrency", fields: [fromCurrency], references: [code])
-  to             Currency @relation("ToCurrency", fields: [toCurrency], references: [code])
+  from Currency @relation("FromCurrency", fields: [fromCurrency], references: [code])
+  to   Currency @relation("ToCurrency", fields: [toCurrency], references: [code])
 
   @@unique([fromCurrency, toCurrency, rateType, effectiveDate])
   @@map("exchange_rates")
@@ -396,31 +398,31 @@ model ExchangeRate {
 // ============================================================
 
 model ChartOfAccount {
-  id               String               @id @default(cuid())
-  companyId        String
-  code             String               // 科目编码 e.g. 1001
-  name             String               // 科目名称
-  nameEn           String?
-  accountType      AccountType
-  normalBalance    AccountNormalBalance
-  parentId         String?
-  level            Int                  @default(1)
-  isLeaf           Boolean              @default(true) // 末级科目才能记账
-  isSummary        Boolean              @default(false)
-  currency         String?              // 外币科目限定货币，null=不限
-  reportCategory   ReportCategory?      // 报表分类（用于资产负债表/利润表）
-  isActive         Boolean              @default(true)
-  description      String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  id             String               @id @default(cuid())
+  companyId      String
+  code           String // 科目编码 e.g. 1001
+  name           String // 科目名称
+  nameEn         String?
+  accountType    AccountType
+  normalBalance  AccountNormalBalance
+  parentId       String?
+  level          Int                  @default(1)
+  isLeaf         Boolean              @default(true) // 末级科目才能记账
+  isSummary      Boolean              @default(false)
+  currency       String? // 外币科目限定货币，null=不限
+  reportCategory ReportCategory? // 报表分类（用于资产负债表/利润表）
+  isActive       Boolean              @default(true)
+  description    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
-  company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  parent           ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children         ChartOfAccount[]     @relation("AccountHierarchy")
-  journalLines          JournalEntryLine[]
-  assetCostAccounts     FixedAsset[]  @relation("AssetCostAccount")
-  assetAccDepAccounts   FixedAsset[]  @relation("AssetAccDepAccount")
-  assetDepExpAccounts   FixedAsset[]  @relation("AssetDepExpAccount")
+  company             Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent              ChartOfAccount?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children            ChartOfAccount[]   @relation("AccountHierarchy")
+  journalLines        JournalEntryLine[]
+  assetCostAccounts   FixedAsset[]       @relation("AssetCostAccount")
+  assetAccDepAccounts FixedAsset[]       @relation("AssetAccDepAccount")
+  assetDepExpAccounts FixedAsset[]       @relation("AssetDepExpAccount")
 
   @@unique([companyId, code])
   @@index([companyId, accountType])
@@ -432,18 +434,18 @@ model ChartOfAccount {
 // ============================================================
 
 model FiscalYear {
-  id          String       @id @default(cuid())
-  companyId   String
-  year        Int          // e.g. 2024
-  startDate   DateTime     @db.Date
-  endDate     DateTime     @db.Date
-  isClosed    Boolean      @default(false)
-  closedAt    DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String    @id @default(cuid())
+  companyId String
+  year      Int // e.g. 2024
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  isClosed  Boolean   @default(false)
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  periods     FiscalPeriod[]
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  periods FiscalPeriod[]
 
   @@unique([companyId, year])
   @@map("fiscal_years")
@@ -452,8 +454,8 @@ model FiscalYear {
 model FiscalPeriod {
   id           String       @id @default(cuid())
   fiscalYearId String
-  periodNumber Int          // 1-12
-  name         String       // e.g. "2024年1月"
+  periodNumber Int // 1-12
+  name         String // e.g. "2024年1月"
   startDate    DateTime     @db.Date
   endDate      DateTime     @db.Date
   status       PeriodStatus @default(OPEN)
@@ -480,10 +482,10 @@ model JournalEntry {
   id              String             @id @default(cuid())
   companyId       String
   fiscalPeriodId  String
-  entryNumber     String             // 凭证编号 e.g. JE-2024-001
+  entryNumber     String // 凭证编号 e.g. JE-2024-001
   entryDate       DateTime           @db.Date
   description     String
-  reference       String?            // 外部参考号
+  reference       String? // 外部参考号
   currency        String             @default("CNY")
   status          JournalEntryStatus @default(DRAFT)
   totalDebit      Decimal            @db.Decimal(20, 4)
@@ -493,18 +495,18 @@ model JournalEntry {
   approvedById    String?
   approvedAt      DateTime?
   postedAt        DateTime?
-  reversedEntryId String?            // 被冲销的原凭证
-  reversalEntryId String?            // 冲销凭证
+  reversedEntryId String? // 被冲销的原凭证
+  reversalEntryId String? // 冲销凭证
   notes           String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  fiscalPeriod    FiscalPeriod       @relation(fields: [fiscalPeriodId], references: [id])
-  createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
-  approvedBy      User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
-  lines           JournalEntryLine[]
-  auditLogs       AuditLog[]
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalPeriod FiscalPeriod       @relation(fields: [fiscalPeriodId], references: [id])
+  createdBy    User               @relation("CreatedBy", fields: [createdById], references: [id])
+  approvedBy   User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
+  lines        JournalEntryLine[]
+  auditLogs    AuditLog[]
 
   @@unique([companyId, entryNumber])
   @@index([companyId, fiscalPeriodId])
@@ -513,21 +515,21 @@ model JournalEntry {
 }
 
 model JournalEntryLine {
-  id             String         @id @default(cuid())
-  journalEntryId String
-  lineNumber     Int
-  accountId      String
-  description    String?
-  debitAmount    Decimal        @default(0) @db.Decimal(20, 4)
-  creditAmount   Decimal        @default(0) @db.Decimal(20, 4)
-  currency       String         @default("CNY")
-  exchangeRate   Decimal        @default(1) @db.Decimal(20, 10)
+  id                    String            @id @default(cuid())
+  journalEntryId        String
+  lineNumber            Int
+  accountId             String
+  description           String?
+  debitAmount           Decimal           @default(0) @db.Decimal(20, 4)
+  creditAmount          Decimal           @default(0) @db.Decimal(20, 4)
+  currency              String            @default("CNY")
+  exchangeRate          Decimal           @default(1) @db.Decimal(20, 10)
   // 本位币金额（折算后）
-  debitAmountLC    Decimal           @default(0) @db.Decimal(20, 4)
-  creditAmountLC   Decimal           @default(0) @db.Decimal(20, 4)
+  debitAmountLC         Decimal           @default(0) @db.Decimal(20, 4)
+  creditAmountLC        Decimal           @default(0) @db.Decimal(20, 4)
   cashFlowActivity      CashFlowActivity? // 现金流分类（用于现金流量表）
   isIntercompany        Boolean           @default(false) // 是否集团内部交易
-  counterpartyCompanyId String?           // 对方集团内公司ID（内部交易标记）
+  counterpartyCompanyId String? // 对方集团内公司ID（内部交易标记）
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
@@ -547,21 +549,21 @@ model JournalEntryLine {
 // ============================================================
 
 model AuditLog {
-  id           String      @id @default(cuid())
-  companyId    String?
-  userId       String
-  action       AuditAction
-  entityType   String      // "JournalEntry", "FiscalPeriod", etc.
-  entityId     String
-  description  String
-  oldValues    Json?
-  newValues    Json?
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime    @default(now())
+  id          String      @id @default(cuid())
+  companyId   String?
+  userId      String
+  action      AuditAction
+  entityType  String // "JournalEntry", "FiscalPeriod", etc.
+  entityId    String
+  description String
+  oldValues   Json?
+  newValues   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
 
-  company      Company?    @relation(fields: [companyId], references: [id])
-  user         User        @relation(fields: [userId], references: [id])
+  company      Company?      @relation(fields: [companyId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
   journalEntry JournalEntry? @relation(fields: [entityId], references: [id], map: "audit_log_journal_entry_fk")
 
   @@index([companyId, entityType])
@@ -574,16 +576,16 @@ model AuditLog {
 // ============================================================
 
 model RolePolicy {
-  id             String           @id @default(cuid())
+  id             String         @id @default(cuid())
   organizationId String
   role           MemberRole
   resource       PolicyResource
   actions        PolicyAction[]
-  companyScope   String?          // null = 全部公司，否则指定 companyId
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  companyScope   String? // null = 全部公司，否则指定 companyId
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, role, resource, companyScope])
   @@index([organizationId, role])
@@ -595,22 +597,22 @@ model RolePolicy {
 // ============================================================
 
 model Customer {
-  id            String   @id @default(cuid())
-  companyId     String
-  code          String   // 客户编码
-  name          String   // 客户名称
-  taxId         String?  // 统一社会信用代码 / 税号
-  contactName   String?
-  phone         String?
-  email         String?
-  address       String?
-  currency      String   @default("CNY") // 结算币种
-  creditLimit   Decimal  @default(0) @db.Decimal(20, 2) // 信用额度
-  paymentTerms  PaymentTerms @default(NET_30)
-  notes         String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String       @id @default(cuid())
+  companyId    String
+  code         String // 客户编码
+  name         String // 客户名称
+  taxId        String? // 统一社会信用代码 / 税号
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  currency     String       @default("CNY") // 结算币种
+  creditLimit  Decimal      @default(0) @db.Decimal(20, 2) // 信用额度
+  paymentTerms PaymentTerms @default(NET_30)
+  notes        String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   arInvoices ARInvoice[]
@@ -621,23 +623,23 @@ model Customer {
 }
 
 model Vendor {
-  id            String   @id @default(cuid())
-  companyId     String
-  code          String   // 供应商编码
-  name          String   // 供应商名称
-  taxId         String?  // 税号
-  contactName   String?
-  phone         String?
-  email         String?
-  address       String?
-  currency      String   @default("CNY")
-  paymentTerms  PaymentTerms @default(NET_30)
-  bankAccount   String?  // 银行账号
-  bankName      String?  // 开户行
-  notes         String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String       @id @default(cuid())
+  companyId    String
+  code         String // 供应商编码
+  name         String // 供应商名称
+  taxId        String? // 税号
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  currency     String       @default("CNY")
+  paymentTerms PaymentTerms @default(NET_30)
+  bankAccount  String? // 银行账号
+  bankName     String? // 开户行
+  notes        String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   apInvoices APInvoice[]
@@ -651,7 +653,7 @@ model ARInvoice {
   id             String          @id @default(cuid())
   companyId      String
   customerId     String
-  invoiceNumber  String          // 发票号
+  invoiceNumber  String // 发票号
   invoiceDate    DateTime        @db.Date
   dueDate        DateTime        @db.Date
   currency       String          @default("CNY")
@@ -662,14 +664,14 @@ model ARInvoice {
   paidAmount     Decimal         @default(0) @db.Decimal(20, 2) // 已核销金额
   status         ARInvoiceStatus @default(DRAFT)
   description    String?
-  journalEntryId String?         // 关联的过账凭证
+  journalEntryId String? // 关联的过账凭证
   fiscalPeriodId String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer     Customer      @relation(fields: [customerId], references: [id])
-  matchings    ARMatching[]
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer  Customer     @relation(fields: [customerId], references: [id])
+  matchings ARMatching[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -682,7 +684,7 @@ model APInvoice {
   id             String          @id @default(cuid())
   companyId      String
   vendorId       String
-  invoiceNumber  String          // 发票号
+  invoiceNumber  String // 发票号
   invoiceDate    DateTime        @db.Date
   dueDate        DateTime        @db.Date
   currency       String          @default("CNY")
@@ -698,9 +700,9 @@ model APInvoice {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  vendor     Vendor       @relation(fields: [vendorId], references: [id])
-  matchings  APMatching[]
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vendor    Vendor       @relation(fields: [vendorId], references: [id])
+  matchings APMatching[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -711,13 +713,13 @@ model APInvoice {
 
 // AR 核销记录：将收款凭证行与 AR 发票关联
 model ARMatching {
-  id                   String   @id @default(cuid())
-  arInvoiceId          String
-  journalEntryLineId   String   // 关联的收款凭证行（借方应收科目归零）
-  matchedAmount        Decimal  @db.Decimal(20, 2)
-  matchedDate          DateTime @db.Date
-  notes                String?
-  createdAt            DateTime @default(now())
+  id                 String   @id @default(cuid())
+  arInvoiceId        String
+  journalEntryLineId String // 关联的收款凭证行（借方应收科目归零）
+  matchedAmount      Decimal  @db.Decimal(20, 2)
+  matchedDate        DateTime @db.Date
+  notes              String?
+  createdAt          DateTime @default(now())
 
   arInvoice        ARInvoice        @relation(fields: [arInvoiceId], references: [id], onDelete: Cascade)
   journalEntryLine JournalEntryLine @relation(fields: [journalEntryLineId], references: [id])
@@ -729,13 +731,13 @@ model ARMatching {
 
 // AP 核销记录：将付款凭证行与 AP 发票关联
 model APMatching {
-  id                   String   @id @default(cuid())
-  apInvoiceId          String
-  journalEntryLineId   String
-  matchedAmount        Decimal  @db.Decimal(20, 2)
-  matchedDate          DateTime @db.Date
-  notes                String?
-  createdAt            DateTime @default(now())
+  id                 String   @id @default(cuid())
+  apInvoiceId        String
+  journalEntryLineId String
+  matchedAmount      Decimal  @db.Decimal(20, 2)
+  matchedDate        DateTime @db.Date
+  notes              String?
+  createdAt          DateTime @default(now())
 
   apInvoice        APInvoice        @relation(fields: [apInvoiceId], references: [id], onDelete: Cascade)
   journalEntryLine JournalEntryLine @relation(fields: [journalEntryLineId], references: [id])
@@ -751,43 +753,43 @@ model APMatching {
 
 // 公司增值税配置（每公司一条）
 model VATConfig {
-  id                  String   @id @default(cuid())
-  companyId           String   @unique
-  taxpayerType        VATType  @default(GENERAL_TAXPAYER)
-  standardRate        Decimal  @default(0.13) @db.Decimal(5, 4)  // 标准税率 13%
-  reducedRates        Json?    // [0.09, 0.06, 0.03] 简易征收等
-  urbanMaintenanceRate Decimal @default(0.07) @db.Decimal(5, 4)  // 城建税率
-  educationSurcharge  Decimal  @default(0.03) @db.Decimal(5, 4)  // 教育费附加
-  localEducation      Decimal  @default(0.02) @db.Decimal(5, 4)  // 地方教育附加
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  companyId            String   @unique
+  taxpayerType         VATType  @default(GENERAL_TAXPAYER)
+  standardRate         Decimal  @default(0.13) @db.Decimal(5, 4) // 标准税率 13%
+  reducedRates         Json? // [0.09, 0.06, 0.03] 简易征收等
+  urbanMaintenanceRate Decimal  @default(0.07) @db.Decimal(5, 4) // 城建税率
+  educationSurcharge   Decimal  @default(0.03) @db.Decimal(5, 4) // 教育费附加
+  localEducation       Decimal  @default(0.02) @db.Decimal(5, 4) // 地方教育附加
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("vat_configs")
 }
 
 // 进销项凭证台账
 model VATRecord {
-  id             String         @id @default(cuid())
-  companyId      String
-  fiscalPeriodId String?        // 所属会计期间（申报月）
-  direction      VATDirection   // SALES / PURCHASE
-  invoiceType    VATInvoiceType @default(SPECIAL_VAT)
-  invoiceNumber  String         // 发票号
-  invoiceDate    DateTime       @db.Date
-  counterparty   String         // 购方/销方名称
-  counterpartyTaxId String?     // 对方税号
-  amount         Decimal        @db.Decimal(20, 2)  // 不含税金额
-  taxRate        Decimal        @db.Decimal(5, 4)   // 税率
-  taxAmount      Decimal        @db.Decimal(20, 2)  // 税额
-  deductible     Boolean        @default(true)      // 是否可抵扣（进项）
-  journalEntryId String?        // 关联凭证
-  notes          String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  companyId         String
+  fiscalPeriodId    String? // 所属会计期间（申报月）
+  direction         VATDirection // SALES / PURCHASE
+  invoiceType       VATInvoiceType @default(SPECIAL_VAT)
+  invoiceNumber     String // 发票号
+  invoiceDate       DateTime       @db.Date
+  counterparty      String // 购方/销方名称
+  counterpartyTaxId String? // 对方税号
+  amount            Decimal        @db.Decimal(20, 2) // 不含税金额
+  taxRate           Decimal        @db.Decimal(5, 4) // 税率
+  taxAmount         Decimal        @db.Decimal(20, 2) // 税额
+  deductible        Boolean        @default(true) // 是否可抵扣（进项）
+  journalEntryId    String? // 关联凭证
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   fiscalPeriod FiscalPeriod? @relation(fields: [fiscalPeriodId], references: [id])
 
   @@index([companyId, direction])
@@ -803,39 +805,39 @@ model VATRecord {
 model FixedAsset {
   id                      String             @id @default(cuid())
   companyId               String
-  assetNumber             String             // 资产编号 e.g. FA-2026-00001
-  name                    String             // 资产名称
+  assetNumber             String // 资产编号 e.g. FA-2026-00001
+  name                    String // 资产名称
   category                AssetCategory      @default(ELECTRONICS)
-  department              String?            // 使用部门（影响折旧费用归属）
-  location                String?            // 存放地点
-  serialNumber            String?            // 序列号/出厂编号
-  acquisitionDate         DateTime           @db.Date  // 入账日期
-  acquisitionCost         Decimal            @db.Decimal(20, 2)  // 原值
-  residualRate            Decimal            @default(0.05) @db.Decimal(5, 4)  // 净残值率
-  usefulLifeMonths        Int                // 预计使用寿命（月）
+  department              String? // 使用部门（影响折旧费用归属）
+  location                String? // 存放地点
+  serialNumber            String? // 序列号/出厂编号
+  acquisitionDate         DateTime           @db.Date // 入账日期
+  acquisitionCost         Decimal            @db.Decimal(20, 2) // 原值
+  residualRate            Decimal            @default(0.05) @db.Decimal(5, 4) // 净残值率
+  usefulLifeMonths        Int // 预计使用寿命（月）
   depreciationMethod      DepreciationMethod @default(STRAIGHT_LINE)
-  totalWorkload           Decimal?           @db.Decimal(20, 2)  // 预计总工作量（工作量法）
-  accumulatedDepreciation Decimal            @default(0) @db.Decimal(20, 2)  // 累计折旧
-  impairmentReserve       Decimal            @default(0) @db.Decimal(20, 2)  // 减值准备
+  totalWorkload           Decimal?           @db.Decimal(20, 2) // 预计总工作量（工作量法）
+  accumulatedDepreciation Decimal            @default(0) @db.Decimal(20, 2) // 累计折旧
+  impairmentReserve       Decimal            @default(0) @db.Decimal(20, 2) // 减值准备
   status                  AssetStatus        @default(ACTIVE)
   // 关联会计科目
-  costAccountId           String?            // 固定资产原值科目（1601）
-  accDepAccountId         String?            // 累计折旧科目（1602）
-  depExpAccountId         String?            // 折旧费用科目（6601管理/制造/销售）
+  costAccountId           String? // 固定资产原值科目（1601）
+  accDepAccountId         String? // 累计折旧科目（1602）
+  depExpAccountId         String? // 折旧费用科目（6601管理/制造/销售）
   // 处置信息
   disposalDate            DateTime?          @db.Date
-  disposalAmount          Decimal?           @db.Decimal(20, 2)  // 处置收入
+  disposalAmount          Decimal?           @db.Decimal(20, 2) // 处置收入
   disposalNotes           String?
-  journalEntryId          String?            // 入账凭证
+  journalEntryId          String? // 入账凭证
   notes                   String?
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
-  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  costAccount          ChartOfAccount?       @relation("AssetCostAccount", fields: [costAccountId], references: [id])
-  accDepAccount        ChartOfAccount?       @relation("AssetAccDepAccount", fields: [accDepAccountId], references: [id])
-  depExpAccount        ChartOfAccount?       @relation("AssetDepExpAccount", fields: [depExpAccountId], references: [id])
-  depreciationRecords  DepreciationRecord[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  costAccount         ChartOfAccount?      @relation("AssetCostAccount", fields: [costAccountId], references: [id])
+  accDepAccount       ChartOfAccount?      @relation("AssetAccDepAccount", fields: [accDepAccountId], references: [id])
+  depExpAccount       ChartOfAccount?      @relation("AssetDepExpAccount", fields: [depExpAccountId], references: [id])
+  depreciationRecords DepreciationRecord[]
 
   @@unique([companyId, assetNumber])
   @@index([companyId, status])
@@ -847,16 +849,16 @@ model DepreciationRecord {
   id             String   @id @default(cuid())
   assetId        String
   fiscalPeriodId String
-  amount         Decimal  @db.Decimal(20, 2)  // 本期折旧额
-  workload       Decimal? @db.Decimal(20, 2)  // 本期实际工作量（工作量法）
-  journalEntryId String?  // 关联凭证
+  amount         Decimal  @db.Decimal(20, 2) // 本期折旧额
+  workload       Decimal? @db.Decimal(20, 2) // 本期实际工作量（工作量法）
+  journalEntryId String? // 关联凭证
   notes          String?
   createdAt      DateTime @default(now())
 
   asset        FixedAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
   fiscalPeriod FiscalPeriod @relation(fields: [fiscalPeriodId], references: [id])
 
-  @@unique([assetId, fiscalPeriodId])  // 每资产每期只能有一条折旧记录
+  @@unique([assetId, fiscalPeriodId]) // 每资产每期只能有一条折旧记录
   @@index([fiscalPeriodId])
   @@map("depreciation_records")
 }
@@ -868,7 +870,7 @@ model DepreciationRecord {
 model ConsolidationGroup {
   id                String   @id @default(cuid())
   organizationId    String
-  name              String   // 合并组名称，e.g. "集团合并报表"
+  name              String // 合并组名称，e.g. "集团合并报表"
   description       String?
   reportingCurrency String   @default("CNY") // 合并报告货币
   createdAt         DateTime @default(now())
@@ -888,7 +890,7 @@ model ConsolidationMember {
   memberType            ConsolidationMemberType @default(SUBSIDIARY) // PARENT / SUBSIDIARY
   ownershipPct          Decimal                 @default(1.0) @db.Decimal(5, 4) // 持股比例 e.g. 0.6 = 60%
   consolidationMethod   ConsolidationMethod     @default(FULL)
-  investmentAccountCode String?                 // 母公司中的长期股权投资科目编码 e.g. "1511"
+  investmentAccountCode String? // 母公司中的长期股权投资科目编码 e.g. "1511"
   sortOrder             Int                     @default(0)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
@@ -910,8 +912,8 @@ model JournalTemplate {
   companyId   String
   name        String
   description String?
-  category    String?           // 分类: 采购/销售/增值税/工资/固定资产/期末调整/所得税/资金往来
-  isSystem    Boolean  @default(false)  // 系统内置模板（不可删除）
+  category    String? // 分类: 采购/销售/增值税/工资/固定资产/期末调整/所得税/资金往来
+  isSystem    Boolean  @default(false) // 系统内置模板（不可删除）
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -930,11 +932,65 @@ model JournalTemplateLine {
   lineNumber  Int
   accountCode String? // 科目编码（用于匹配当前公司科目表）
   accountName String? // 科目名称提示（界面显示）
-  direction   String  // "DEBIT" | "CREDIT"
+  direction   String // "DEBIT" | "CREDIT"
   description String? // 行摘要模板（可留空）
 
   template JournalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
   @@map("journal_template_lines")
+}
+
+// ============================================================
+// 集团科目表（Phase 7 - P3）
+// ============================================================
+
+enum MappingType {
+  DIRECT // 直接映射：精确科目代码
+  RANGE // 范围映射：编号区间
+}
+
+model GroupAccount {
+  id             String               @id @default(cuid())
+  organizationId String
+  code           String // 集团科目编码 e.g. "1000"
+  name           String // 集团科目名称
+  accountType    AccountType
+  normalBalance  AccountNormalBalance
+  parentId       String?
+  level          Int                  @default(1)
+  isLeaf         Boolean              @default(true)
+  reportCategory ReportCategory?
+  description    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       GroupAccount?         @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children     GroupAccount[]        @relation("GroupHierarchy")
+  mappings     GroupAccountMapping[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("group_accounts")
+}
+
+model GroupAccountMapping {
+  id             String      @id @default(cuid())
+  groupAccountId String
+  companyId      String
+  mappingType    MappingType @default(DIRECT)
+  localCode      String? // DIRECT: 精确科目代码
+  rangeStart     String? // RANGE: 起始编号（含）
+  rangeEnd       String? // RANGE: 结束编号（含）
+  priority       Int         @default(0) // 数字越大优先级越高
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  groupAccount GroupAccount @relation(fields: [groupAccountId], references: [id], onDelete: Cascade)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([groupAccountId])
+  @@index([companyId])
+  @@map("group_account_mappings")
 }
