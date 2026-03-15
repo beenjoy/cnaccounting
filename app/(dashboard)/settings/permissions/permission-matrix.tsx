@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { PolicyResource, PolicyAction, MemberRole } from "@prisma/client";
 import { RESOURCE_LABELS, ACTION_LABELS, ROLE_LABELS, CONFIGURABLE_ROLES } from "@/lib/permissions";
+import { PolicyWizard } from "./policy-wizard";
 
 type PolicyRow = {
   role: MemberRole;
@@ -32,6 +33,7 @@ export function PermissionMatrix({ initialMatrix, allResources, allActions }: Pr
   const [isPending, startTransition] = useTransition();
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const lookup = buildLookup(matrix);
 
@@ -92,6 +94,18 @@ export function PermissionMatrix({ initialMatrix, allResources, allActions }: Pr
     });
   }
 
+  async function handleWizardSaved() {
+    // 向导保存完成后，重新拉取矩阵数据
+    try {
+      const dataRes = await fetch("/api/role-policies");
+      const data = await dataRes.json() as { matrix: PolicyRow[] };
+      setMatrix(data.matrix);
+      showToast("策略已更新", true);
+    } catch {
+      showToast("策略已保存，刷新页面查看最新状态", true);
+    }
+  }
+
   async function resetToDefault(resource: PolicyResource) {
     const res = await fetch(
       `/api/role-policies?role=${selectedRole}&resource=${resource}`,
@@ -121,22 +135,36 @@ export function PermissionMatrix({ initialMatrix, allResources, allActions }: Pr
         </div>
       )}
 
-      {/* 角色选择 Tabs */}
-      <div className="flex gap-2 border-b">
-        {CONFIGURABLE_ROLES.map((role) => (
-          <button
-            key={role}
-            onClick={() => setSelectedRole(role)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              selectedRole === role
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {ROLE_LABELS[role].split("（")[0]}
-          </button>
-        ))}
+      {/* 角色选择 Tabs + 向导按钮 */}
+      <div className="flex items-center justify-between border-b">
+        <div className="flex gap-2">
+          {CONFIGURABLE_ROLES.map((role) => (
+            <button
+              key={role}
+              onClick={() => setSelectedRole(role)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                selectedRole === role
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {ROLE_LABELS[role].split("（")[0]}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setWizardOpen(true)}
+          className="mb-1 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+        >
+          快速配置向导
+        </button>
       </div>
+
+      <PolicyWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSaved={handleWizardSaved}
+      />
 
       {/* 说明 */}
       <p className="text-sm text-muted-foreground">

@@ -17,6 +17,16 @@ export default async function CurrenciesPage() {
     take: 200,
   });
 
+  // 查询最近一次 ECB 同步日期
+  const lastEcbRate = await db.exchangeRate.findFirst({
+    where: { source: "ECB" },
+    orderBy: { effectiveDate: "desc" },
+    select: { effectiveDate: true },
+  });
+  const lastEcbSync = lastEcbRate
+    ? lastEcbRate.effectiveDate.toISOString().slice(0, 10)
+    : null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -26,6 +36,7 @@ export default async function CurrenciesPage() {
       <CurrenciesClient
         currencies={currencies}
         exchangeRates={exchangeRates.map((r) => ({ ...r, rate: r.rate.toString() }))}
+        lastEcbSync={lastEcbSync}
       />
     </div>
   );

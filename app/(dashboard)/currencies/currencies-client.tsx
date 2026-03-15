@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,7 @@ type RateForm = z.infer<typeof rateSchema>;
 interface CurrenciesClientProps {
   currencies: Currency[];
   exchangeRates: ExchangeRate[];
+  lastEcbSync: string | null;
 }
 
 const rateTypeLabel: Record<string, string> = {
@@ -78,13 +79,14 @@ const rateTypeLabel: Record<string, string> = {
   HISTORICAL: "历史",
 };
 
-export function CurrenciesClient({ currencies: initial, exchangeRates: initialRates }: CurrenciesClientProps) {
+export function CurrenciesClient({ currencies: initial, exchangeRates: initialRates, lastEcbSync }: CurrenciesClientProps) {
   const router = useRouter();
   const [currencies, setCurrencies] = useState(initial);
   const [rates, setRates] = useState(initialRates);
   const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { register: regC, handleSubmit: handleC, reset: resetC, formState: { errors: errorsC } } =
     useForm<CurrencyForm>({ resolver: zodResolver(currencySchema), defaultValues: { decimals: 2 } });
@@ -142,6 +144,32 @@ export function CurrenciesClient({ currencies: initial, exchangeRates: initialRa
     }
   };
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch("/api/exchange-rates/sync", { method: "POST" });
+      const result = await response.json() as {
+        synced?: number;
+        date?: string;
+        skipped?: string[];
+        error?: string;
+      };
+      if (!response.ok) {
+        toast.error(result.error ?? "同步失败，请稍后重试");
+        return;
+      }
+      const skippedMsg = result.skipped && result.skipped.length > 0
+        ? `（${result.skipped.join("/")} 无 ECB 数据，已跳过）`
+        : "";
+      toast.success(`已同步 ${result.synced} 条汇率（ECB ${result.date}）${skippedMsg}`);
+      router.refresh();
+    } catch {
+      toast.error("网络错误，请稍后重试");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <Tabs defaultValue="currencies">
       <TabsList>
@@ -187,7 +215,23 @@ export function CurrenciesClient({ currencies: initial, exchangeRates: initialRa
       </TabsContent>
 
       <TabsContent value="rates" className="mt-4 space-y-4">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSync}
+              disabled={isSyncing}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "同步中..." : "同步 ECB 汇率"}
+            </Button>
+            {lastEcbSync && (
+              <span className="text-xs text-muted-foreground">
+                上次同步：{lastEcbSync}
+              </span>
+            )}
+          </div>
           <Button size="sm" onClick={() => setRateDialogOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />
             录入汇率
@@ -226,8 +270,16 @@ export function CurrenciesClient({ currencies: initial, exchangeRates: initialRa
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(r.effectiveDate)}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {r.source || "手工"}
+                    <TableCell>
+                      {r.source === "ECB" ? (
+                        <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-xs">
+                          ECB
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground text-xs">
+                          手工
+                        </Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
