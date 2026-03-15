@@ -22,7 +22,7 @@ export default async function BalanceSheetPage({
   const company = membership?.organization.companies[0];
   if (!company) redirect("/settings/companies");
 
-  // 获取所有会计期间（含年度信息）
+  // 获取所有会计期间（含年度信息和日期）
   const periods = await db.fiscalPeriod.findMany({
     where: { fiscalYear: { companyId: company.id } },
     include: { fiscalYear: { select: { year: true, id: true } } },
@@ -42,10 +42,7 @@ export default async function BalanceSheetPage({
 
   const selectedPeriod = periods.find((p) => p.id === selectedPeriodId);
 
-  // ----------------------------------------------------------------
-  // 资产负债表数据计算
-  // 规则：汇总本财年内，截止所选期间（含）的所有已过账凭证
-  // ----------------------------------------------------------------
+  // ── 类型定义 ─────────────────────────────────────────────────────
   type AccountBalance = {
     accountId: string;
     accountCode: string;
@@ -53,59 +50,33 @@ export default async function BalanceSheetPage({
     accountType: string;
     normalBalance: string;
     reportCategory: string | null;
-    balance: number; // 正数 = 余额（资产/费用为借方净额，负债/权益/收入为贷方净额）
+    balance: number;
   };
 
-  const accountBalances: AccountBalance[] = [];
+  type RawLine = {
+    accountId: string;
+    debitAmountLC: Decimal | null;
+    creditAmountLC: Decimal | null;
+    account: {
+      id: string;
+      code: string;
+      name: string;
+      accountType: string;
+      normalBalance: string;
+      reportCategory: string | null;
+    };
+  };
 
-  if (selectedPeriod) {
-    // 取同一财年中，期间序号 <= 所选期间序号的所有期间 ID
-    const periodIds = periods
-      .filter(
-        (p) =>
-          p.fiscalYear.id === selectedPeriod.fiscalYear.id &&
-          p.periodNumber <= selectedPeriod.periodNumber
-      )
-      .map((p) => p.id);
-
-    // 查询这些期间的所有已过账凭证明细（关联科目含 reportCategory）
-    const lines = await db.journalEntryLine.findMany({
-      where: {
-        journalEntry: {
-          companyId: company.id,
-          fiscalPeriodId: { in: periodIds },
-          status: "POSTED",
-        },
-      },
-      include: {
-        account: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            accountType: true,
-            normalBalance: true,
-            reportCategory: true,
-          },
-        },
-      },
-    });
-
-    // 按科目汇总借贷方金额
+  // ── 辅助：将凭证行聚合为余额列表 ────────────────────────────────
+  function aggregateLines(lines: RawLine[]): AccountBalance[] {
     const map = new Map<
       string,
       {
-        accountId: string;
-        code: string;
-        name: string;
-        type: string;
-        normalBalance: string;
-        reportCategory: string | null;
-        totalDebit: number;
-        totalCredit: number;
+        accountId: string; code: string; name: string;
+        type: string; normalBalance: string; reportCategory: string | null;
+        totalDebit: number; totalCredit: number;
       }
     >();
-
     for (const line of lines) {
       const key = line.accountId;
       if (!map.has(key)) {
@@ -124,26 +95,118 @@ export default async function BalanceSheetPage({
       e.totalDebit += toNum(line.debitAmountLC);
       e.totalCredit += toNum(line.creditAmountLC);
     }
-
-    // 计算余额（资产/费用：借方净额；负债/权益/收入：贷方净额）
-    for (const acc of map.values()) {
-      const balance =
-        acc.normalBalance === "DEBIT"
-          ? acc.totalDebit - acc.totalCredit
-          : acc.totalCredit - acc.totalDebit;
-
-      accountBalances.push({
+    return Array.from(map.values())
+      .map((acc) => ({
         accountId: acc.accountId,
         accountCode: acc.code,
         accountName: acc.name,
         accountType: acc.type,
         normalBalance: acc.normalBalance,
         reportCategory: acc.reportCategory,
-        balance,
-      });
-    }
+        balance:
+          acc.normalBalance === "DEBIT"
+            ? acc.totalDebit - acc.totalCredit
+            : acc.totalCredit - acc.totalDebit,
+      }))
+      .sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+  }
 
-    accountBalances.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+  const accountSelect = {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      accountType: true,
+      normalBalance: true,
+      reportCategory: true,
+    },
+  } as const;
+
+  let accountBalances: AccountBalance[] = [];
+  let priorYearBalances: AccountBalance[] = [];
+  let priorYearName = "";
+
+  if (selectedPeriod) {
+    // ── 资产/负债/权益（永久性科目）：从公司成立起累计至期末 ──────────
+    const bsLines = await db.journalEntryLine.findMany({
+      where: {
+        journalEntry: {
+          companyId: company.id,
+          status: "POSTED",
+          fiscalPeriod: { endDate: { lte: selectedPeriod.endDate } },
+        },
+        account: { accountType: { in: ["ASSET", "LIABILITY", "EQUITY"] } },
+      },
+      include: { account: accountSelect },
+    });
+
+    // ── 收入/费用（临时性科目）：仅本财年，用于推算未结账的净利润 ──────
+    const currentYearPeriodIds = periods
+      .filter(
+        (p) =>
+          p.fiscalYear.id === selectedPeriod.fiscalYear.id &&
+          p.periodNumber <= selectedPeriod.periodNumber
+      )
+      .map((p) => p.id);
+
+    const plLines = await db.journalEntryLine.findMany({
+      where: {
+        journalEntry: {
+          companyId: company.id,
+          status: "POSTED",
+          fiscalPeriodId: { in: currentYearPeriodIds },
+        },
+        account: { accountType: { in: ["REVENUE", "EXPENSE"] } },
+      },
+      include: { account: accountSelect },
+    });
+
+    accountBalances = [
+      ...aggregateLines(bsLines as RawLine[]),
+      ...aggregateLines(plLines as RawLine[]),
+    ];
+
+    // ── 上年末余额（对比列，CAS 30）─────────────────────────────────
+    const currentYear = selectedPeriod.fiscalYear.year;
+    const priorYearDec = periods.find(
+      (p) => p.fiscalYear.year === currentYear - 1 && p.periodNumber === 12
+    );
+    if (priorYearDec) {
+      const priorYearAllPeriodIds = periods
+        .filter((p) => p.fiscalYear.year === currentYear - 1)
+        .map((p) => p.id);
+
+      const [priorBsLines, priorPlLines] = await Promise.all([
+        db.journalEntryLine.findMany({
+          where: {
+            journalEntry: {
+              companyId: company.id,
+              status: "POSTED",
+              fiscalPeriod: { endDate: { lte: priorYearDec.endDate } },
+            },
+            account: { accountType: { in: ["ASSET", "LIABILITY", "EQUITY"] } },
+          },
+          include: { account: accountSelect },
+        }),
+        db.journalEntryLine.findMany({
+          where: {
+            journalEntry: {
+              companyId: company.id,
+              status: "POSTED",
+              fiscalPeriodId: { in: priorYearAllPeriodIds },
+            },
+            account: { accountType: { in: ["REVENUE", "EXPENSE"] } },
+          },
+          include: { account: accountSelect },
+        }),
+      ]);
+
+      priorYearBalances = [
+        ...aggregateLines(priorBsLines as RawLine[]),
+        ...aggregateLines(priorPlLines as RawLine[]),
+      ];
+      priorYearName = `${currentYear - 1}年末`;
+    }
   }
 
   return (
@@ -164,6 +227,8 @@ export default async function BalanceSheetPage({
         selectedPeriodId={selectedPeriodId || ""}
         selectedPeriodName={selectedPeriod?.name || ""}
         accountBalances={accountBalances}
+        priorYearBalances={priorYearBalances}
+        priorYearName={priorYearName}
         companyName={company.name}
       />
     </div>
