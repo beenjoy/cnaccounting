@@ -90,10 +90,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 生成凭证编号
-    const year = new Date(data.entryDate).getFullYear();
+    // 生成凭证编号（序号按公司+年度独立计数，每年从00001重新开始）
+    const entryDate = new Date(data.entryDate);
+    const year = entryDate.getFullYear();
+    const yearStart = new Date(`${year}-01-01T00:00:00.000Z`);
+    const yearEnd   = new Date(`${year + 1}-01-01T00:00:00.000Z`);
     const count = await db.journalEntry.count({
-      where: { companyId: data.companyId },
+      where: {
+        companyId: data.companyId,
+        entryDate: { gte: yearStart, lt: yearEnd },
+      },
     });
     const entryNumber = `JE-${year}-${String(count + 1).padStart(5, "0")}`;
 

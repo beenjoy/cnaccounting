@@ -21,14 +21,12 @@ export default async function TrialBalancePage({
   const company = membership?.organization.companies[0];
   if (!company) redirect("/settings/companies");
 
-  // 获取所有会计期间
   const periods = await db.fiscalPeriod.findMany({
     where: { fiscalYear: { companyId: company.id } },
     include: { fiscalYear: { select: { year: true } } },
     orderBy: [{ fiscalYear: { year: "desc" } }, { periodNumber: "desc" }],
   });
 
-  // 默认取当前月份的期间，否则最近的开放期间
   const now = new Date();
   const currentPeriod = periods.find(
     (p) => p.fiscalYear.year === now.getFullYear() && p.periodNumber === now.getMonth() + 1
@@ -40,54 +38,87 @@ export default async function TrialBalancePage({
     periods[0]?.id;
 
   async function fetchPeriodBalances(pId: string) {
-    const lines = await db.journalEntryLine.findMany({
+    const selPeriod = await db.fiscalPeriod.findUnique({
+      where: { id: pId },
+      select: { startDate: true },
+    });
+    if (!selPeriod) return [];
+
+    type AccEntry = {
+      code: string; name: string; type: string;
+      openDebit: number; openCredit: number;
+      periodDebit: number; periodCredit: number;
+    };
+    const accountMap = new Map<string, AccEntry>();
+
+    const priorLines = await db.journalEntryLine.findMany({
       where: {
-        journalEntry: { companyId: company!.id, fiscalPeriodId: pId, status: "POSTED" },
+        journalEntry: {
+          companyId: company!.id,
+          status: "POSTED",
+          fiscalPeriod: { endDate: { lt: selPeriod.startDate } },
+        },
       },
-      include: {
-        account: { select: { code: true, name: true, accountType: true } },
-      },
+      include: { account: { select: { code: true, name: true, accountType: true } } },
     });
 
-    const accountMap = new Map<
-      string,
-      { code: string; name: string; type: string; debit: number; credit: number }
-    >();
-
-    for (const line of lines) {
+    for (const line of priorLines) {
       const key = line.accountId;
       if (!accountMap.has(key)) {
         accountMap.set(key, {
-          code: line.account.code,
-          name: line.account.name,
+          code: line.account.code, name: line.account.name,
           type: line.account.accountType,
-          debit: 0,
-          credit: 0,
+          openDebit: 0, openCredit: 0, periodDebit: 0, periodCredit: 0,
         });
       }
-      const entry = accountMap.get(key)!;
-      entry.debit  += parseFloat(line.debitAmountLC.toString());
-      entry.credit += parseFloat(line.creditAmountLC.toString());
+      const e = accountMap.get(key)!;
+      e.openDebit  += parseFloat(line.debitAmountLC.toString());
+      e.openCredit += parseFloat(line.creditAmountLC.toString());
+    }
+
+    const currentLines = await db.journalEntryLine.findMany({
+      where: {
+        journalEntry: { companyId: company!.id, fiscalPeriodId: pId, status: "POSTED" },
+      },
+      include: { account: { select: { code: true, name: true, accountType: true } } },
+    });
+
+    for (const line of currentLines) {
+      const key = line.accountId;
+      if (!accountMap.has(key)) {
+        accountMap.set(key, {
+          code: line.account.code, name: line.account.name,
+          type: line.account.accountType,
+          openDebit: 0, openCredit: 0, periodDebit: 0, periodCredit: 0,
+        });
+      }
+      const e = accountMap.get(key)!;
+      e.periodDebit  += parseFloat(line.debitAmountLC.toString());
+      e.periodCredit += parseFloat(line.creditAmountLC.toString());
     }
 
     return Array.from(accountMap.values())
       .sort((a, b) => a.code.localeCompare(b.code))
-      .map((acc) => ({
-        accountCode: acc.code,
-        accountName: acc.name,
-        accountType: acc.type,
-        openingDebit: 0,
-        openingCredit: 0,
-        periodDebit: acc.debit,
-        periodCredit: acc.credit,
-        closingDebit:  Math.max(0, acc.debit - acc.credit),
-        closingCredit: Math.max(0, acc.credit - acc.debit),
-      }));
+      .map((acc) => {
+        const openNet    = acc.openDebit - acc.openCredit;
+        const periodNet  = acc.periodDebit - acc.periodCredit;
+        const closingNet = openNet + periodNet;
+        return {
+          accountCode:   acc.code,
+          accountName:   acc.name,
+          accountType:   acc.type,
+          openingDebit:  Math.max(0,  openNet),
+          openingCredit: Math.max(0, -openNet),
+          periodDebit:   acc.periodDebit,
+          periodCredit:  acc.periodCredit,
+          closingDebit:  Math.max(0,  closingNet),
+          closingCredit: Math.max(0, -closingNet),
+        };
+      });
   }
 
   const balanceData = selectedPeriodId ? await fetchPeriodBalances(selectedPeriodId) : [];
 
-  // 对比期间数据
   const compareData =
     comparePeriodId && comparePeriodId !== selectedPeriodId
       ? await fetchPeriodBalances(comparePeriodId)
@@ -97,7 +128,7 @@ export default async function TrialBalancePage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">试算表</h1>
-        <p className="text-muted-foreground mt-1">按期间汇总所有已过账凭证的借贷余额，支持对比分析与 CSV 导出</p>
+        <p className="text-muted-foreground mt-1">展示期初余额、本期发生额和期末余额，验证借贷平衡</p>
       </div>
       <TrialBalanceReport
         periods={periods.map((p) => ({

@@ -59,6 +59,8 @@ export function TrialBalanceReport({
 }: TrialBalanceReportProps) {
   const router = useRouter();
 
+  const totalOpeningDebit  = balanceData.reduce((s, r) => s + r.openingDebit, 0);
+  const totalOpeningCredit = balanceData.reduce((s, r) => s + r.openingCredit, 0);
   const totalPeriodDebit   = balanceData.reduce((s, r) => s + r.periodDebit, 0);
   const totalPeriodCredit  = balanceData.reduce((s, r) => s + r.periodCredit, 0);
   const totalClosingDebit  = balanceData.reduce((s, r) => s + r.closingDebit, 0);
@@ -68,7 +70,6 @@ export function TrialBalanceReport({
   const selectedPeriod = periods.find((p) => p.id === selectedPeriodId);
   const comparePeriod  = periods.find((p) => p.id === comparePeriodId);
 
-  // Build compare lookup: accountCode → row
   const compareMap = new Map<string, BalanceRow>();
   for (const r of compareData) compareMap.set(r.accountCode, r);
 
@@ -77,7 +78,9 @@ export function TrialBalanceReport({
 
   const hasCompare = comparePeriodId && compareData.length > 0;
 
-  // Navigate helper (preserve compare param)
+  const baseColCount = 3 + 2 + 2 + 2; // code, name, type + opening + period + closing
+  const colCount = hasCompare ? baseColCount + 2 : baseColCount;
+
   function navigate(newPeriodId: string, newCmpId?: string) {
     const params = new URLSearchParams();
     params.set("periodId", newPeriodId);
@@ -99,9 +102,7 @@ export function TrialBalanceReport({
                 onChange={(e) => navigate(e.target.value, comparePeriodId)}
               >
                 {periods.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -120,7 +121,6 @@ export function TrialBalanceReport({
                   ))}
               </select>
             </div>
-
             <div className="flex items-center gap-2 ml-auto">
               {selectedPeriod && (
                 <Badge variant={selectedPeriod.status === "OPEN" ? "success" : "secondary"}>
@@ -146,7 +146,7 @@ export function TrialBalanceReport({
         </CardContent>
       </Card>
 
-      {/* 试算表 */}
+      {/* 试算表主体 */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -162,26 +162,40 @@ export function TrialBalanceReport({
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
+                {/* 分组表头第一行 */}
+                <TableRow className="bg-gray-100 border-b-0">
+                  <TableHead rowSpan={2} className="w-24 pl-6 align-middle border-r text-center">科目编码</TableHead>
+                  <TableHead rowSpan={2} className="align-middle border-r">科目名称</TableHead>
+                  <TableHead rowSpan={2} className="w-16 align-middle border-r text-center">类型</TableHead>
+                  <TableHead colSpan={2} className="text-center font-semibold border-r border-b bg-blue-50/50">期初余额</TableHead>
+                  <TableHead colSpan={2} className={`text-center font-semibold border-b ${hasCompare ? "border-r" : "border-r"} bg-slate-50/50`}>本期发生额</TableHead>
+                  {hasCompare && (
+                    <TableHead colSpan={2} className="text-center font-semibold text-muted-foreground border-r border-b bg-slate-50/30">
+                      {comparePeriod?.name}
+                    </TableHead>
+                  )}
+                  <TableHead colSpan={2} className="text-center font-semibold border-b bg-green-50/50">期末余额</TableHead>
+                </TableRow>
+                {/* 分组表头第二行 */}
                 <TableRow className="bg-gray-50">
-                  <TableHead className="w-24 pl-6">科目编码</TableHead>
-                  <TableHead>科目名称</TableHead>
-                  <TableHead className="w-16">类型</TableHead>
-                  <TableHead className="text-right w-28">本期借方</TableHead>
-                  <TableHead className="text-right w-28">本期贷方</TableHead>
+                  <TableHead className="text-right w-28 font-normal text-xs">借方</TableHead>
+                  <TableHead className="text-right w-28 font-normal text-xs border-r">贷方</TableHead>
+                  <TableHead className="text-right w-28 font-normal text-xs">借方</TableHead>
+                  <TableHead className={`text-right w-28 font-normal text-xs border-r`}>贷方</TableHead>
                   {hasCompare && (
                     <>
-                      <TableHead className="text-right w-28 text-muted-foreground">{comparePeriod?.name}借方</TableHead>
-                      <TableHead className="text-right w-28 text-muted-foreground">{comparePeriod?.name}贷方</TableHead>
+                      <TableHead className="text-right w-28 font-normal text-xs text-muted-foreground">借方</TableHead>
+                      <TableHead className="text-right w-28 font-normal text-xs text-muted-foreground border-r">贷方</TableHead>
                     </>
                   )}
-                  <TableHead className="text-right w-28">期末借方余额</TableHead>
-                  <TableHead className="text-right w-28 pr-6">期末贷方余额</TableHead>
+                  <TableHead className="text-right w-28 font-normal text-xs">借方</TableHead>
+                  <TableHead className="text-right w-28 font-normal text-xs pr-6">贷方</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {balanceData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={hasCompare ? 9 : 7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={colCount} className="text-center py-12 text-muted-foreground">
                       {selectedPeriodId ? "该期间暂无已过账凭证" : "请选择会计期间"}
                     </TableCell>
                   </TableRow>
@@ -190,29 +204,39 @@ export function TrialBalanceReport({
                     const cmp = compareMap.get(row.accountCode);
                     return (
                       <TableRow key={row.accountCode}>
-                        <TableCell className="pl-6 font-mono text-sm">{row.accountCode}</TableCell>
-                        <TableCell className="text-sm">{row.accountName}</TableCell>
-                        <TableCell>
+                        <TableCell className="pl-6 font-mono text-sm border-r">{row.accountCode}</TableCell>
+                        <TableCell className="text-sm border-r">{row.accountName}</TableCell>
+                        <TableCell className="border-r text-center">
                           <span className="text-xs text-muted-foreground">
                             {accountTypeLabel[row.accountType]}
                           </span>
                         </TableCell>
+                        {/* 期初余额 */}
+                        <TableCell className="text-right font-mono text-sm">
+                          {row.openingDebit > 0 ? formatAmount(row.openingDebit) : ""}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm border-r">
+                          {row.openingCredit > 0 ? formatAmount(row.openingCredit) : ""}
+                        </TableCell>
+                        {/* 本期发生额 */}
                         <TableCell className="text-right font-mono text-sm">
                           {row.periodDebit > 0 ? formatAmount(row.periodDebit) : ""}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right font-mono text-sm border-r">
                           {row.periodCredit > 0 ? formatAmount(row.periodCredit) : ""}
                         </TableCell>
+                        {/* 对比期间 */}
                         {hasCompare && (
                           <>
                             <TableCell className="text-right font-mono text-sm text-muted-foreground">
                               {cmp && cmp.periodDebit > 0 ? formatAmount(cmp.periodDebit) : "—"}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                            <TableCell className="text-right font-mono text-sm text-muted-foreground border-r">
                               {cmp && cmp.periodCredit > 0 ? formatAmount(cmp.periodCredit) : "—"}
                             </TableCell>
                           </>
                         )}
+                        {/* 期末余额 */}
                         <TableCell className="text-right font-mono text-sm">
                           {row.closingDebit > 0 ? formatAmount(row.closingDebit) : ""}
                         </TableCell>
@@ -227,13 +251,15 @@ export function TrialBalanceReport({
               {balanceData.length > 0 && (
                 <TableFooter>
                   <TableRow className="font-semibold bg-gray-50">
-                    <TableCell colSpan={3} className="pl-6 py-3">合计</TableCell>
+                    <TableCell colSpan={3} className="pl-6 py-3 border-r">合计</TableCell>
+                    <TableCell className="text-right font-mono">{formatAmount(totalOpeningDebit)}</TableCell>
+                    <TableCell className="text-right font-mono border-r">{formatAmount(totalOpeningCredit)}</TableCell>
                     <TableCell className="text-right font-mono">{formatAmount(totalPeriodDebit)}</TableCell>
-                    <TableCell className="text-right font-mono">{formatAmount(totalPeriodCredit)}</TableCell>
+                    <TableCell className="text-right font-mono border-r">{formatAmount(totalPeriodCredit)}</TableCell>
                     {hasCompare && (
                       <>
                         <TableCell className="text-right font-mono text-muted-foreground">{formatAmount(totalCmpDebit)}</TableCell>
-                        <TableCell className="text-right font-mono text-muted-foreground">{formatAmount(totalCmpCredit)}</TableCell>
+                        <TableCell className="text-right font-mono text-muted-foreground border-r">{formatAmount(totalCmpCredit)}</TableCell>
                       </>
                     )}
                     <TableCell className="text-right font-mono">{formatAmount(totalClosingDebit)}</TableCell>
