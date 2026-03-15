@@ -348,6 +348,7 @@ model Company {
   fixedAssets            FixedAsset[]
   consolidationMembers   ConsolidationMember[]
   counterpartyJournalLines JournalEntryLine[] @relation("IntercompanyCounterparty")
+  journalTemplates       JournalTemplate[]
 
   @@unique([organizationId, code])
   @@map("companies")
@@ -898,4 +899,42 @@ model ConsolidationMember {
   @@unique([groupId, companyId])
   @@index([groupId])
   @@map("consolidation_members")
+}
+
+// ============================================================
+// 凭证模板（Journal Templates）
+// ============================================================
+
+model JournalTemplate {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  category    String?           // 分类: 采购/销售/增值税/工资/固定资产/期末调整/所得税/资金往来
+  isSystem    Boolean  @default(false)  // 系统内置模板（不可删除）
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lines   JournalTemplateLine[]
+
+  @@index([companyId, category])
+  @@map("journal_templates")
+}
+
+model JournalTemplateLine {
+  id          String  @id @default(cuid())
+  templateId  String
+  lineNumber  Int
+  accountCode String? // 科目编码（用于匹配当前公司科目表）
+  accountName String? // 科目名称提示（界面显示）
+  direction   String  // "DEBIT" | "CREDIT"
+  description String? // 行摘要模板（可留空）
+
+  template JournalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("journal_template_lines")
 }

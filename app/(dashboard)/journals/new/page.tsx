@@ -34,7 +34,7 @@ export default async function NewJournalPage() {
     orderBy: { code: "asc" },
   });
 
-  // 获取最新汇率（各外币 → 本位币 CNY），构建 { USD: "7.12", EUR: "7.85" } 映射
+  // 获取最新汇率
   const latestRates = await db.exchangeRate.findMany({
     where: { toCurrency: company.functionalCurrency },
     orderBy: { effectiveDate: "desc" },
@@ -46,7 +46,14 @@ export default async function NewJournalPage() {
     }
   }
 
-  // 找当前月份对应的期间（优先 OPEN，其次任意）
+  // 凭证模板（当前公司）
+  const templates = await db.journalTemplate.findMany({
+    where: { companyId: company.id, isActive: true },
+    include: { lines: { orderBy: { lineNumber: "asc" } } },
+    orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  // 找当前月份对应的期间
   const now = new Date();
   const currentPeriod = openPeriods.find(
     (p) =>
@@ -88,6 +95,19 @@ export default async function NewJournalPage() {
         }))}
         exchangeRates={exchangeRateMap}
         functionalCurrency={company.functionalCurrency}
+        templates={templates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          category: t.category,
+          lines: t.lines.map((l) => ({
+            lineNumber: l.lineNumber,
+            accountCode: l.accountCode,
+            accountName: l.accountName,
+            direction: l.direction,
+            description: l.description,
+          })),
+        }))}
       />
     </div>
   );

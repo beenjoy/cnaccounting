@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Decimal from "decimal.js";
-import { Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, LayoutTemplate, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,22 @@ type LineItem = {
   exchangeRate: string;
 };
 
+type TemplateLine = {
+  lineNumber: number;
+  accountCode: string | null;
+  accountName: string | null;
+  direction: string;
+  description: string | null;
+};
+
+type Template = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  lines: TemplateLine[];
+};
+
 interface JournalEntryFormProps {
   companyId: string;
   openPeriods: Period[];
@@ -58,15 +74,16 @@ interface JournalEntryFormProps {
   defaultPeriodId?: string;
   exchangeRates?: Record<string, string>;
   functionalCurrency?: string;
+  templates?: Template[];
 }
 
-const emptyLine = (): LineItem => ({
+const emptyLine = (currency = "CNY"): LineItem => ({
   key: Math.random().toString(36).slice(2),
   accountId: "",
   description: "",
   debitAmount: "",
   creditAmount: "",
-  currency: "CNY",
+  currency,
   exchangeRate: "1",
 });
 
@@ -78,12 +95,14 @@ export function JournalEntryForm({
   defaultPeriodId,
   exchangeRates = {},
   functionalCurrency = "CNY",
+  templates = [],
 }: JournalEntryFormProps) {
   const router = useRouter();
   const [description, setDescription] = useState("");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [periodId, setPeriodId] = useState(defaultPeriodId || openPeriods[0]?.id || "");
   const [reference, setReference] = useState("");
+  const [showTemplatePanel, setShowTemplatePanel] = useState(false);
 
   const selectedPeriod = openPeriods.find((p) => p.id === periodId);
   const isPeriodClosed = selectedPeriod?.status === "CLOSED";
@@ -99,8 +118,31 @@ export function JournalEntryForm({
       openPeriods.find((p) => p.year === year && p.periodNumber === month);
     if (matched) setPeriodId(matched.id);
   };
+
   const [lines, setLines] = useState<LineItem[]>([emptyLine(), emptyLine()]);
   const [isPending, setIsPending] = useState(false);
+
+  // Build account code → id lookup for template application
+  const accountByCode = new Map(accounts.map((a) => [a.code, a.id]));
+
+  function applyTemplate(tpl: Template) {
+    const newLines: LineItem[] = tpl.lines.map((l) => {
+      const accId = l.accountCode ? (accountByCode.get(l.accountCode) ?? "") : "";
+      return {
+        key: Math.random().toString(36).slice(2),
+        accountId: accId,
+        description: l.description ?? "",
+        debitAmount:  l.direction === "DEBIT"  ? "" : "",
+        creditAmount: l.direction === "CREDIT" ? "" : "",
+        currency: functionalCurrency,
+        exchangeRate: "1",
+      };
+    });
+    setLines(newLines);
+    if (!description && tpl.name) setDescription(tpl.name);
+    setShowTemplatePanel(false);
+    toast.success(`已应用模板「${tpl.name}」，请填写金额`);
+  }
 
   const totalDebit = lines.reduce(
     (sum, l) => sum.plus(new Decimal(l.debitAmount || "0")),
@@ -113,7 +155,7 @@ export function JournalEntryForm({
   const isBalanced = totalDebit.equals(totalCredit) && totalDebit.gt(0);
   const diff = totalDebit.minus(totalCredit);
 
-  const addLine = () => setLines((prev) => [...prev, emptyLine()]);
+  const addLine = () => setLines((prev) => [...prev, emptyLine(functionalCurrency)]);
 
   const removeLine = (key: string) => {
     if (lines.length <= 2) {
@@ -129,19 +171,11 @@ export function JournalEntryForm({
         prev.map((l) => {
           if (l.key !== key) return l;
           const updated = { ...l, [field]: value };
-          // 借贷互斥：填写借方时清空贷方，反之亦然
-          if (field === "debitAmount" && value !== "") {
-            updated.creditAmount = "";
-          } else if (field === "creditAmount" && value !== "") {
-            updated.debitAmount = "";
-          }
-          // 切换货币时自动填入最新汇率
+          if (field === "debitAmount" && value !== "") updated.creditAmount = "";
+          else if (field === "creditAmount" && value !== "") updated.debitAmount = "";
           if (field === "currency") {
-            if (value === functionalCurrency) {
-              updated.exchangeRate = "1";
-            } else {
-              updated.exchangeRate = exchangeRates[value] ?? "1";
-            }
+            updated.exchangeRate =
+              value === functionalCurrency ? "1" : (exchangeRates[value] ?? "1");
           }
           return updated;
         })
@@ -151,29 +185,13 @@ export function JournalEntryForm({
   );
 
   const handleSubmit = async (action: "draft" | "submit") => {
-    if (!description.trim()) {
-      toast.error("请填写凭证摘要");
-      return;
-    }
-    if (!periodId) {
-      toast.error("请选择会计期间");
-      return;
-    }
-    if (!entryDate) {
-      toast.error("请选择凭证日期");
-      return;
-    }
+    if (!description.trim()) { toast.error("请填写凭证摘要"); return; }
+    if (!periodId) { toast.error("请选择会计期间"); return; }
+    if (!entryDate) { toast.error("请选择凭证日期"); return; }
 
     const validLines = lines.filter((l) => l.accountId);
-    if (validLines.length < 2) {
-      toast.error("至少需要2条明细行");
-      return;
-    }
-
-    if (!isBalanced) {
-      toast.error("借贷不平衡，无法提交");
-      return;
-    }
+    if (validLines.length < 2) { toast.error("至少需要2条明细行"); return; }
+    if (!isBalanced) { toast.error("借贷不平衡，无法提交"); return; }
 
     setIsPending(true);
     try {
@@ -200,10 +218,7 @@ export function JournalEntryForm({
       });
 
       const result = await response.json();
-      if (!response.ok) {
-        toast.error(result.error || "保存失败");
-        return;
-      }
+      if (!response.ok) { toast.error(result.error || "保存失败"); return; }
 
       toast.success(action === "draft" ? "草稿已保存" : "凭证已提交审批");
       router.push(`/journals/${result.entry.id}`);
@@ -216,12 +231,80 @@ export function JournalEntryForm({
 
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
 
+  // Group templates by category for panel
+  const templatesByCategory = new Map<string, Template[]>();
+  for (const tpl of templates) {
+    const cat = tpl.category ?? "其他";
+    if (!templatesByCategory.has(cat)) templatesByCategory.set(cat, []);
+    templatesByCategory.get(cat)!.push(tpl);
+  }
+
   return (
     <div className="space-y-6">
+      {/* 模板面板 */}
+      {showTemplatePanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h2 className="font-semibold">选择凭证模板</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">选择后自动填入科目，再填写金额即可</p>
+              </div>
+              <button onClick={() => setShowTemplatePanel(false)} className="p-1 rounded hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5">
+              {templates.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8 text-sm">
+                  暂无可用模板，请到「凭证模板」页面创建或导入内置模板
+                </p>
+              ) : (
+                Array.from(templatesByCategory.entries()).map(([cat, tpls]) => (
+                  <div key={cat}>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {tpls.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          onClick={() => applyTemplate(tpl)}
+                          className="text-left rounded-lg border px-4 py-3 hover:border-primary hover:bg-primary/5 transition-colors group"
+                        >
+                          <p className="font-medium text-sm group-hover:text-primary">{tpl.name}</p>
+                          {tpl.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{tpl.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {tpl.lines.map((l) =>
+                              `${l.direction === "DEBIT" ? "借" : "贷"} ${l.accountCode ?? ""}`
+                            ).join(" / ")}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 基本信息 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">凭证信息</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">凭证信息</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTemplatePanel(true)}
+              className="gap-1.5"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              使用模板
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -242,6 +325,13 @@ export function JournalEntryForm({
                 value={entryDate}
                 onChange={(e) => handleDateChange(e.target.value)}
               />
+              {/* 期间自动提示 */}
+              {entryDate && selectedPeriod && (
+                <p className={`text-xs mt-1 ${isPeriodClosed ? "text-orange-600" : "text-green-700"}`}>
+                  对应期间：{selectedPeriod.name}
+                  {isPeriodClosed ? "（已关闭）" : "（开放）"}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>会计期间 *</Label>
@@ -306,19 +396,11 @@ export function JournalEntryForm({
               <thead className="border-b bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground w-12">#</th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground w-48">
-                    会计科目
-                  </th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground w-48">会计科目</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">摘要</th>
-                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">
-                    借方金额
-                  </th>
-                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">
-                    贷方金额
-                  </th>
-                  <th className="text-center px-4 py-2 font-medium text-muted-foreground w-20">
-                    货币
-                  </th>
+                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">借方金额</th>
+                  <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">贷方金额</th>
+                  <th className="text-center px-4 py-2 font-medium text-muted-foreground w-20">货币</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -379,9 +461,7 @@ export function JournalEntryForm({
                           onChange={(e) => updateLine(line.key, "currency", e.target.value)}
                         >
                           {currencies.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.code}
-                            </option>
+                            <option key={c.code} value={c.code}>{c.code}</option>
                           ))}
                         </select>
                         {line.currency !== functionalCurrency && (
@@ -423,15 +503,9 @@ export function JournalEntryForm({
               </tbody>
               <tfoot className="border-t bg-gray-50">
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm font-medium text-right">
-                    合计
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold">
-                    {formatAmount(totalDebit)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold">
-                    {formatAmount(totalCredit)}
-                  </td>
+                  <td colSpan={3} className="px-4 py-3 text-sm font-medium text-right">合计</td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">{formatAmount(totalDebit)}</td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">{formatAmount(totalCredit)}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tfoot>
@@ -462,29 +536,20 @@ export function JournalEntryForm({
         }`}
       >
         {isBalanced ? (
-          <>
-            <CheckCircle2 className="h-4 w-4" />
-            借贷平衡，可以保存
-          </>
+          <><CheckCircle2 className="h-4 w-4" />借贷平衡，可以保存</>
         ) : totalDebit.gt(0) || totalCredit.gt(0) ? (
           <>
             <AlertCircle className="h-4 w-4" />
-            借贷不平衡，差额：{formatAmount(diff.abs())}（
-            {diff.gt(0) ? "借方多" : "贷方多"}）
+            借贷不平衡，差额：{formatAmount(diff.abs())}（{diff.gt(0) ? "借方多" : "贷方多"}）
           </>
         ) : (
-          <>
-            <AlertCircle className="h-4 w-4" />
-            请录入凭证明细
-          </>
+          <><AlertCircle className="h-4 w-4" />请录入凭证明细</>
         )}
       </div>
 
       {/* 操作按钮 */}
       <div className="flex items-center gap-3 justify-end">
-        <Button variant="outline" onClick={() => router.back()}>
-          取消
-        </Button>
+        <Button variant="outline" onClick={() => router.back()}>取消</Button>
         <Button
           variant="outline"
           disabled={isPending || !description.trim() || !periodId}

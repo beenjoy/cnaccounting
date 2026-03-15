@@ -25,6 +25,7 @@ import {
   Wrench,
   Package,
   GitMerge,
+  LayoutTemplate,
 } from "lucide-react";
 
 interface NavItem {
@@ -45,6 +46,11 @@ const navItems: NavItem[] = [
     href: "/journals",
     label: "日记账凭证",
     icon: FileText,
+  },
+  {
+    href: "/journals/templates",
+    label: "凭证模板",
+    icon: LayoutTemplate,
   },
   {
     href: "/periods",

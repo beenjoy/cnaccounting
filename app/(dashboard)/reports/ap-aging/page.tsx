@@ -93,6 +93,25 @@ export default async function APAgingPage() {
     grandTotal += row.total;
   }
 
+  // GL 核对：查 应付账款（2202）科目的已过账余额
+  const apAccount = await db.chartOfAccount.findFirst({
+    where: { companyId: company.id, code: "2202" },
+  });
+  let glBalance = 0;
+  if (apAccount) {
+    const glAgg = await db.journalEntryLine.aggregate({
+      where: {
+        accountId: apAccount.id,
+        journalEntry: { companyId: company.id, status: "POSTED" },
+      },
+      _sum: { debitAmountLC: true, creditAmountLC: true },
+    });
+    const debit  = parseFloat((glAgg._sum.debitAmountLC  ?? 0).toString());
+    const credit = parseFloat((glAgg._sum.creditAmountLC ?? 0).toString());
+    glBalance = credit - debit; // 负债贷方正常余额
+  }
+  const discrepancy = grandTotal - glBalance;
+
   return (
     <div className="space-y-6">
       <div>
@@ -107,48 +126,81 @@ export default async function APAgingPage() {
           <p className="text-muted-foreground text-sm">暂无未结应付发票</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">供应商</th>
-                {AGING_BUCKETS.map((b) => (
-                  <th key={b.label} className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
-                    {b.label}
-                  </th>
+        <>
+          {/* 账龄明细表 */}
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">供应商</th>
+                  {AGING_BUCKETS.map((b) => (
+                    <th key={b.label} className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
+                      {b.label}
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">合计</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((row) => (
+                  <tr key={row.vendorId} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-muted-foreground mr-2">{row.vendorCode}</span>
+                      {row.vendorName}
+                    </td>
+                    {row.buckets.map((amount, i) => (
+                      <td key={i} className={`px-3 py-3 text-right font-mono ${i > 0 && amount > 0 ? "text-orange-600" : "text-muted-foreground"}`}>
+                        {fmt(amount)}
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 text-right font-mono font-semibold">{fmt(row.total)}</td>
+                  </tr>
                 ))}
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">合计</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.map((row) => (
-                <tr key={row.vendorId} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-muted-foreground mr-2">{row.vendorCode}</span>
-                    {row.vendorName}
-                  </td>
-                  {row.buckets.map((amount, i) => (
-                    <td key={i} className={`px-3 py-3 text-right font-mono ${i > 0 && amount > 0 ? "text-orange-600" : "text-muted-foreground"}`}>
+              </tbody>
+              <tfoot className="border-t-2 bg-muted/30">
+                <tr>
+                  <td className="px-4 py-3 font-semibold">合计</td>
+                  {totals.map((amount, i) => (
+                    <td key={i} className={`px-3 py-3 text-right font-mono font-semibold ${i > 0 && amount > 0 ? "text-orange-600" : ""}`}>
                       {fmt(amount)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right font-mono font-semibold">{fmt(row.total)}</td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">{fmt(grandTotal)}</td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t-2 bg-muted/30">
-              <tr>
-                <td className="px-4 py-3 font-semibold">合计</td>
-                {totals.map((amount, i) => (
-                  <td key={i} className={`px-3 py-3 text-right font-mono font-semibold ${i > 0 && amount > 0 ? "text-orange-600" : ""}`}>
-                    {fmt(amount)}
-                  </td>
-                ))}
-                <td className="px-4 py-3 text-right font-mono font-semibold">{fmt(grandTotal)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* 子账本 vs 总账核对 */}
+          <div className={`rounded-lg border p-4 text-sm ${Math.abs(discrepancy) < 0.01 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+            <h2 className={`font-semibold mb-3 ${Math.abs(discrepancy) < 0.01 ? "text-green-800" : "text-red-800"}`}>
+              子账本与总账核对（2202 应付账款）
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-muted-foreground text-xs">AP 发票未结余额合计</p>
+                <p className="font-mono font-semibold mt-0.5">{fmt(grandTotal)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">总账 2202 应付账款余额</p>
+                <p className="font-mono font-semibold mt-0.5">
+                  {apAccount ? fmt(glBalance) : "（未找到科目）"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">差异</p>
+                <p className={`font-mono font-semibold mt-0.5 ${Math.abs(discrepancy) < 0.01 ? "text-green-700" : "text-red-700"}`}>
+                  {Math.abs(discrepancy) < 0.01 ? "✓ 无差异" : fmt(discrepancy)}
+                </p>
+              </div>
+            </div>
+            {Math.abs(discrepancy) >= 0.01 && (
+              <p className="text-xs text-red-700 mt-3 border-t border-red-200 pt-2">
+                ⚠ 子账本与总账存在差异。可能原因：有应付款凭证未通过 AP 发票模块录入，或存在直接调整总账的分录。请检查核实。
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       <p className="text-xs text-muted-foreground">
