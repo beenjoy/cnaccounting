@@ -7,6 +7,7 @@ import {
   computeConsolidatedPeriodBalances,
   computeConsolidatedBalances,
   computeNCIAndElimination,
+  computeEquityMethodData,
   type ConsolidationMemberInfo,
 } from "@/lib/consolidation-utils";
 
@@ -120,6 +121,19 @@ export default async function ConsolidatedIncomeStatementPage({
 
   const periodMetrics = calcMetrics(periodByCategory);
   const ytdMetrics = calcMetrics(ytdByCategory);
+
+  // ── CAS 2：权益法投资收益 ──
+  const equityItems = await computeEquityMethodData(members, year, month);
+  const equityIncomePeriod = equityItems.reduce((s, e) => s + e.investmentIncomePeriod, 0);
+  const equityIncomeYtd    = equityItems.reduce((s, e) => s + e.investmentIncomeYtd, 0);
+
+  // 调整后利润（纳入权益法投资收益）
+  const adjOpProfitPeriod    = periodMetrics.operatingProfit + equityIncomePeriod;
+  const adjOpProfitYtd       = ytdMetrics.operatingProfit    + equityIncomeYtd;
+  const adjTotalProfitPeriod = adjOpProfitPeriod + periodMetrics.nonOpIncome - periodMetrics.nonOpExpense;
+  const adjTotalProfitYtd    = adjOpProfitYtd    + ytdMetrics.nonOpIncome    - ytdMetrics.nonOpExpense;
+  const adjNetProfitPeriod   = adjTotalProfitPeriod - periodMetrics.incomeTax;
+  const adjNetProfitYtd      = adjTotalProfitYtd    - ytdMetrics.incomeTax;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -249,7 +263,15 @@ export default async function ConsolidatedIncomeStatementPage({
                   </tr>
                 );
               })}
-              <Row label="二、营业利润" periodValue={periodMetrics.operatingProfit} ytdValue={ytdMetrics.operatingProfit} isSubtotal isBold />
+              {/* CAS 2 权益法投资收益（仅当存在权益法成员时显示） */}
+              {equityItems.length > 0 && (
+                <tr className="hover:bg-violet-50/20 border-b text-violet-700">
+                  <td className="px-4 py-2 text-sm pl-8">加：投资收益（权益法，CAS 2）</td>
+                  <td className="px-4 py-2 text-right font-mono text-sm">{fmt(equityIncomePeriod)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-sm text-muted-foreground">{fmt(equityIncomeYtd)}</td>
+                </tr>
+              )}
+              <Row label="二、营业利润" periodValue={adjOpProfitPeriod} ytdValue={adjOpProfitYtd} isSubtotal isBold />
 
               {/* Non-operating */}
               <tr className="bg-muted/10 border-b">
@@ -259,7 +281,7 @@ export default async function ConsolidatedIncomeStatementPage({
               </tr>
               <Row label="加：营业外收入" periodValue={periodMetrics.nonOpIncome} ytdValue={ytdMetrics.nonOpIncome} />
               <Row label="减：营业外支出" periodValue={periodMetrics.nonOpExpense} ytdValue={ytdMetrics.nonOpExpense} indent isNegative />
-              <Row label="三、利润总额" periodValue={periodMetrics.totalProfit} ytdValue={ytdMetrics.totalProfit} isSubtotal isBold />
+              <Row label="三、利润总额" periodValue={adjTotalProfitPeriod} ytdValue={adjTotalProfitYtd} isSubtotal isBold />
 
               {/* Tax & net profit */}
               <tr className="bg-muted/10 border-b">
@@ -272,11 +294,11 @@ export default async function ConsolidatedIncomeStatementPage({
             <tfoot className="border-t-2 bg-primary/5">
               <tr className="font-bold">
                 <td className="px-4 py-3">四、净利润</td>
-                <td className={`px-4 py-3 text-right font-mono ${periodMetrics.netProfit < 0 ? "text-red-600" : ""}`}>
-                  {fmt(periodMetrics.netProfit)}
+                <td className={`px-4 py-3 text-right font-mono ${adjNetProfitPeriod < 0 ? "text-red-600" : ""}`}>
+                  {fmt(adjNetProfitPeriod)}
                 </td>
-                <td className={`px-4 py-3 text-right font-mono ${ytdMetrics.netProfit < 0 ? "text-red-600" : ""}`}>
-                  {fmt(ytdMetrics.netProfit)}
+                <td className={`px-4 py-3 text-right font-mono ${adjNetProfitYtd < 0 ? "text-red-600" : ""}`}>
+                  {fmt(adjNetProfitYtd)}
                 </td>
               </tr>
               {/* CAS 33: NCI profit attribution — only when there are non-wholly-owned subsidiaries */}
@@ -287,10 +309,10 @@ export default async function ConsolidatedIncomeStatementPage({
                       其中：归属母公司所有者的净利润
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-muted-foreground">
-                      {fmt(periodMetrics.netProfit - nci.nciProfitPeriod)}
+                      {fmt(adjNetProfitPeriod - nci.nciProfitPeriod)}
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-muted-foreground">
-                      {fmt(ytdMetrics.netProfit - nci.nciProfitYtd)}
+                      {fmt(adjNetProfitYtd - nci.nciProfitYtd)}
                     </td>
                   </tr>
                   <tr className="text-sm">
@@ -308,6 +330,22 @@ export default async function ConsolidatedIncomeStatementPage({
               )}
             </tfoot>
           </table>
+        </div>
+      )}
+
+      {/* CAS 2 权益法说明 */}
+      {equityItems.length > 0 && (
+        <div className="no-print rounded-lg border p-4 text-xs bg-violet-50 border-violet-200 text-violet-800">
+          <strong>CAS 2 投资收益说明：</strong>
+          已按权益法确认以下联营企业投资收益（本期/累计）：
+          {equityItems.map((e) => (
+            <span key={e.memberId}>
+              {" · "}{e.companyName}（{(e.ownershipPct * 100).toFixed(1)}%持股，
+              本期投资收益 ¥{fmt(e.investmentIncomePeriod)}，
+              累计 ¥{fmt(e.investmentIncomeYtd)}）
+            </span>
+          ))}
+          {" "}投资收益 = 被投资方净利润 × 持股比例，已纳入营业利润。
         </div>
       )}
 

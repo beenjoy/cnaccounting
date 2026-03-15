@@ -52,6 +52,13 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
     orderBy: { code: "asc" },
   }) : [];
 
+  // Load open fiscal periods (for impairment journal entry generation)
+  const openPeriods = canEdit ? await db.fiscalPeriod.findMany({
+    where: { fiscalYear: { companyId: company.id }, status: "OPEN" },
+    select: { id: true, name: true },
+    orderBy: [{ fiscalYear: { year: "desc" } }, { periodNumber: "desc" }],
+  }) : [];
+
   const assets = await db.fixedAsset.findMany({
     where: {
       companyId: company.id,
@@ -65,9 +72,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
     orderBy: { assetNumber: "asc" },
   });
 
-  const totalCost = assets.reduce((s, a) => s + Number(a.acquisitionCost), 0);
-  const totalAccDep = assets.reduce((s, a) => s + Number(a.accumulatedDepreciation), 0);
-  const totalBookValue = totalCost - totalAccDep;
+  const totalCost       = assets.reduce((s, a) => s + Number(a.acquisitionCost), 0);
+  const totalAccDep     = assets.reduce((s, a) => s + Number(a.accumulatedDepreciation), 0);
+  const totalImpair     = assets.reduce((s, a) => s + Number(a.impairmentReserve), 0);
+  const totalBookValue  = totalCost - totalAccDep - totalImpair;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -95,7 +103,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         {[
           { label: "资产原值合计", value: fmt(totalCost), sub: `${assets.length} 项资产` },
           { label: "累计折旧合计", value: fmt(totalAccDep), sub: `折旧率 ${totalCost > 0 ? ((totalAccDep / totalCost) * 100).toFixed(1) : "0.0"}%` },
-          { label: "账面净值合计", value: fmt(totalBookValue), sub: `净值率 ${totalCost > 0 ? ((totalBookValue / totalCost) * 100).toFixed(1) : "0.0"}%` },
+          { label: "账面净值合计", value: fmt(totalBookValue), sub: totalImpair > 0 ? `含减值准备 ¥${fmt(totalImpair)}` : `净值率 ${totalCost > 0 ? ((totalBookValue / totalCost) * 100).toFixed(1) : "0.0"}%` },
         ].map((card) => (
           <div key={card.label} className="rounded-lg border bg-white p-4">
             <p className="text-sm text-muted-foreground">{card.label}</p>
@@ -163,9 +171,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             </thead>
             <tbody className="divide-y">
               {assets.map((asset) => {
-                const cost = Number(asset.acquisitionCost);
-                const accDep = Number(asset.accumulatedDepreciation);
-                const bookValue = cost - accDep;
+                const cost      = Number(asset.acquisitionCost);
+                const accDep    = Number(asset.accumulatedDepreciation);
+                const impair    = Number(asset.impairmentReserve);
+                const bookValue = cost - accDep - impair;
                 const statusInfo = STATUS_LABELS[asset.status] ?? { label: asset.status, cls: "bg-gray-100 text-gray-600" };
                 return (
                   <tr key={asset.id} className="hover:bg-muted/20">
@@ -179,6 +188,9 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.cls}`}>
                         {statusInfo.label}
                       </span>
+                      {impair > 0 && (
+                        <div className="text-xs text-red-600 mt-0.5">减值准备：¥{fmt(impair)}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-mono">{fmt(cost)}</td>
                     <td className="px-4 py-3 text-right font-mono text-muted-foreground">{fmt(accDep)}</td>
@@ -196,7 +208,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                         <div className="flex justify-center gap-2">
                           <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="edit" asset={asset} />
                           {asset.status !== "DISPOSED" && (
-                            <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="dispose" asset={asset} />
+                            <>
+                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="impair" asset={asset} periods={openPeriods} />
+                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="dispose" asset={asset} />
+                            </>
                           )}
                           <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="delete" asset={asset} />
                         </div>

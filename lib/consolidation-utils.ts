@@ -590,3 +590,95 @@ export async function computeNCIAndElimination(
     details,
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   权益法核算  (CAS 2《长期股权投资》)
+   ═══════════════════════════════════════════════════════════════════════
+
+   适用于 consolidationMethod=EQUITY 的联营企业成员（持股通常 20%–50%）。
+
+   核心逻辑：
+   1. 权益法投资额 = 被投资方净资产 × 持股比例（列示于非流动资产）
+   2. 本期投资收益 = 被投资方本期净利润 × 持股比例（计入营业利润）
+   3. 母公司账面投资余额（如配置 investmentAccountCode）供对比列示
+
+   注：权益法联营企业不纳入全额合并范围，不参与 NCI 计算。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export interface EquityMethodItem {
+  memberId: string;
+  companyName: string;
+  ownershipPct: number;
+  /** 被投资方净资产（权益科目余额合计，贷方正常） */
+  associateEquity: number;
+  /** 权益法投资额 = associateEquity × ownershipPct（列示于非流动资产） */
+  adjustedInvestment: number;
+  /** 母公司账面投资余额（配置了 investmentAccountCode 时有效，否则为 null） */
+  parentInvestmentBalance: number | null;
+  /** 本期投资收益 = 被投资方本期净利润 × ownershipPct */
+  investmentIncomePeriod: number;
+  /** 累计投资收益（1月至 month 月） */
+  investmentIncomeYtd: number;
+}
+
+/**
+ * 计算权益法联营企业投资数据（CAS 2）。
+ *
+ * 仅处理 consolidationMethod=EQUITY 且 memberType=SUBSIDIARY 的成员。
+ * 复用内部函数 computeCompanyEquityBalance / computeCompanyProfit /
+ * computeParentInvestmentBalance。
+ *
+ * @param members - 合并范围内所有成员（含母公司）
+ * @param year    - 报告年度
+ * @param month   - 报告截止月份（1-12）
+ */
+export async function computeEquityMethodData(
+  members: ConsolidationMemberInfo[],
+  year:    number,
+  month:   number,
+): Promise<EquityMethodItem[]> {
+  const equityMembers = members.filter(
+    (m) => m.memberType === "SUBSIDIARY" && m.consolidationMethod === "EQUITY"
+  );
+  if (equityMembers.length === 0) return [];
+
+  const parent = members.find((m) => m.memberType === "PARENT");
+
+  const result: EquityMethodItem[] = [];
+
+  for (const m of equityMembers) {
+    // 1. 被投资方净资产 & 权益法投资额
+    const associateEquity     = await computeCompanyEquityBalance(m.companyId, year, month);
+    const adjustedInvestment  = associateEquity * m.ownershipPct;
+
+    // 2. 本期 / 累计投资收益
+    const assocProfitPeriod       = await computeCompanyProfit(m.companyId, year, month, true);
+    const assocProfitYtd          = await computeCompanyProfit(m.companyId, year, month, false);
+    const investmentIncomePeriod  = assocProfitPeriod * m.ownershipPct;
+    const investmentIncomeYtd     = assocProfitYtd    * m.ownershipPct;
+
+    // 3. 母公司账面投资余额（可选，用于比对差异）
+    let parentInvestmentBalance: number | null = null;
+    if (parent && m.investmentAccountCode) {
+      parentInvestmentBalance = await computeParentInvestmentBalance(
+        parent.companyId,
+        m.investmentAccountCode,
+        year,
+        month,
+      );
+    }
+
+    result.push({
+      memberId:              m.id,
+      companyName:           m.companyName,
+      ownershipPct:          m.ownershipPct,
+      associateEquity,
+      adjustedInvestment,
+      parentInvestmentBalance,
+      investmentIncomePeriod,
+      investmentIncomeYtd,
+    });
+  }
+
+  return result;
+}

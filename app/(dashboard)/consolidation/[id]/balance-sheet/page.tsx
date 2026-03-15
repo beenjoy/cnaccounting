@@ -16,6 +16,7 @@ import {
   loadGroupInfo,
   computeConsolidatedBalances,
   computeNCIAndElimination,
+  computeEquityMethodData,
   type ConsolidationMemberInfo,
 } from "@/lib/consolidation-utils";
 
@@ -84,6 +85,10 @@ export default async function ConsolidatedBalanceSheetPage({
         hasInvestmentData: false, details: [],
       };
 
+  // ── CAS 2：权益法联营企业投资 ──
+  const equityItems = await computeEquityMethodData(members, year, month);
+  const equityInvestmentTotal = equityItems.reduce((s, e) => s + e.adjustedInvestment, 0);
+
   // ── 过滤 BS 科目（排除损益类）──
   const bsBalances = balances.filter(
     (b) => ["ASSET", "LIABILITY", "EQUITY"].includes(b.accountType) && b.balance !== 0
@@ -125,8 +130,8 @@ export default async function ConsolidatedBalanceSheetPage({
     currentPeriodProfit;
 
   // ── CAS 33 调整后合计 ──
-  // 资产侧：减去母公司投资（已包含在加总资产中），加回商誉
-  const adjustedAssetTotal = rawAssetTotal - nci.eliminatedAssets + nci.goodwillTotal;
+  // 资产侧：减去母公司投资（已包含在加总资产中），加回商誉，再加权益法联营企业投资（未含于全额合并范围）
+  const adjustedAssetTotal = rawAssetTotal - nci.eliminatedAssets + nci.goodwillTotal + equityInvestmentTotal;
 
   // 权益侧：
   //   归属母公司所有者权益 = 加总权益 - 全部子公司权益（eliminatedEquity）
@@ -264,6 +269,29 @@ export default async function ConsolidatedBalanceSheetPage({
                 <CategorySection category="CURRENT_ASSET" />
                 <CategorySection category="NON_CURRENT_ASSET" />
 
+                {/* CAS 2 权益法联营企业投资（非流动资产末尾） */}
+                {equityItems.length > 0 && (
+                  <>
+                    <tr className="bg-violet-50/30">
+                      <td colSpan={2} className="px-4 py-2 text-xs font-semibold text-violet-700">
+                        ── 权益法联营企业投资（CAS 2）──
+                      </td>
+                    </tr>
+                    {equityItems.map((e) => (
+                      <tr key={e.memberId} className="hover:bg-muted/10">
+                        <td className="px-4 py-2 pl-8 text-sm">
+                          {e.companyName}（{(e.ownershipPct * 100).toFixed(1)}%持股）
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-sm">{fmt(e.adjustedInvestment)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t font-medium text-violet-800">
+                      <td className="px-4 py-2 pl-8 text-sm">权益法投资合计</td>
+                      <td className="px-4 py-2 text-right font-mono">{fmt(equityInvestmentTotal)}</td>
+                    </tr>
+                  </>
+                )}
+
                 {/* 未分类资产 */}
                 {uncategorized.filter((b) => b.accountType === "ASSET").map((b, i) => (
                   <tr key={`u-asset-${i}`} className="hover:bg-muted/10">
@@ -399,6 +427,24 @@ export default async function ConsolidatedBalanceSheetPage({
               </tfoot>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* CAS 2 权益法说明 */}
+      {equityItems.length > 0 && bsBalances.length > 0 && (
+        <div className="no-print rounded-lg border p-4 text-xs bg-violet-50 border-violet-200 text-violet-800">
+          <strong>CAS 2 权益法说明：</strong>
+          以下联营企业按权益法列示于非流动资产，不纳入全额合并范围：
+          {equityItems.map((e) => (
+            <span key={e.memberId}>
+              {" · "}{e.companyName}（持股{(e.ownershipPct * 100).toFixed(1)}%，
+              净资产份额 ¥{fmt(e.adjustedInvestment)}
+              {e.parentInvestmentBalance !== null
+                ? `，账面投资 ¥${fmt(e.parentInvestmentBalance)}`
+                : ""}）
+            </span>
+          ))}
+          {" "}权益法投资额 = 被投资方净资产 × 持股比例。
         </div>
       )}
 

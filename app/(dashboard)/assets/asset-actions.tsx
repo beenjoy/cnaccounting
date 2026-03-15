@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Account { id: string; code: string; name: string; }
+interface Period  { id: string; name: string; }
 
 interface Asset {
   id: string;
@@ -23,13 +24,16 @@ interface Asset {
   accDepAccountId?: string | null;
   depExpAccountId?: string | null;
   notes?: string | null;
+  impairmentReserve?: unknown;
+  accumulatedDepreciation?: unknown;
 }
 
 interface Props {
   companyId: string;
   leafAccounts: Account[];
-  mode?: "new" | "edit" | "delete" | "dispose";
+  mode?: "new" | "edit" | "delete" | "dispose" | "impair";
   asset?: Asset;
+  periods?: Period[];
 }
 
 const CATEGORIES = [
@@ -48,7 +52,7 @@ const DEP_METHODS = [
   { value: "USAGE_BASED",       label: "工作量法" },
 ];
 
-export function AssetActions({ companyId, leafAccounts, mode = "new", asset }: Props) {
+export function AssetActions({ companyId, leafAccounts, mode = "new", asset, periods = [] }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -80,6 +84,13 @@ export function AssetActions({ companyId, leafAccounts, mode = "new", asset }: P
     disposalDate: today,
     disposalAmount: "0",
     disposalNotes: "",
+  });
+
+  const [impairForm, setImpairForm] = useState({
+    impairDate:     today,
+    impairAmount:   "",
+    impairReason:   "",
+    fiscalPeriodId: periods[0]?.id ?? "",
   });
 
   // Derived: monthly depreciation preview
@@ -166,6 +177,31 @@ export function AssetActions({ companyId, leafAccounts, mode = "new", asset }: P
     }
   }
 
+  async function handleImpair(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/fixed-assets/${asset!.id}/impair`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          impairDate:     impairForm.impairDate,
+          impairAmount:   parseFloat(impairForm.impairAmount) || 0,
+          impairReason:   impairForm.impairReason || null,
+          fiscalPeriodId: impairForm.fiscalPeriodId || null,
+          generateEntry:  !!impairForm.fiscalPeriodId,
+        }),
+      });
+      const data = await res.json() as { error?: string; newBookValue?: number; entryNumber?: string };
+      if (!res.ok) { setError(data.error ?? "操作失败"); return; }
+      setOpen(false);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // ── Delete ──────────────────────────────────────────────
   if (mode === "delete") {
     return (
@@ -185,6 +221,81 @@ export function AssetActions({ companyId, leafAccounts, mode = "new", asset }: P
                   {loading ? "处理中..." : "确认删除"}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ── Impair ──────────────────────────────────────────────
+  if (mode === "impair") {
+    const cost      = Number(asset?.acquisitionCost ?? 0);
+    const accDep    = Number(asset?.accumulatedDepreciation ?? 0);
+    const existing  = Number(asset?.impairmentReserve ?? 0);
+    const bookValue = cost - accDep - existing;
+    return (
+      <>
+        <button onClick={() => setOpen(true)} className="text-xs text-purple-600 hover:text-purple-800">减值</button>
+        {open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-[420px]">
+              <h3 className="text-base font-semibold mb-1">计提固定资产减值准备</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                {asset?.assetNumber} · {asset?.name}
+                <br />
+                当前账面净值：¥{bookValue.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
+                {existing > 0 && <span className="ml-2 text-red-600">（已有减值准备 ¥{existing.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}）</span>}
+              </p>
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+                <strong>注意（CAS 8）：</strong>固定资产减值准备一经计提，不得转回。
+                请确认已进行减值测试（可收回金额 &lt; 账面净值）。
+              </div>
+              <form onSubmit={handleImpair} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">减值日期 <span className="text-red-500">*</span></label>
+                  <input type="date" value={impairForm.impairDate}
+                    onChange={(e) => setImpairForm({ ...impairForm, impairDate: e.target.value })}
+                    required className="w-full rounded-md border px-3 py-1.5 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">减值金额 <span className="text-red-500">*</span></label>
+                  <input type="number" min="0.01" step="0.01" max={bookValue} value={impairForm.impairAmount}
+                    onChange={(e) => setImpairForm({ ...impairForm, impairAmount: e.target.value })}
+                    required placeholder={`最大 ${bookValue.toFixed(2)}`}
+                    className="w-full rounded-md border px-3 py-1.5 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">减值原因</label>
+                  <textarea value={impairForm.impairReason}
+                    onChange={(e) => setImpairForm({ ...impairForm, impairReason: e.target.value })}
+                    rows={2} placeholder="如：市场价值大幅下跌、技术陈旧、受损等"
+                    className="w-full rounded-md border px-3 py-1.5 text-sm" />
+                </div>
+                {periods.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">会计期间（生成凭证）</label>
+                    <select value={impairForm.fiscalPeriodId}
+                      onChange={(e) => setImpairForm({ ...impairForm, fiscalPeriodId: e.target.value })}
+                      className="w-full rounded-md border px-3 py-1.5 text-sm">
+                      <option value="">— 仅更新减值准备，不生成凭证 —</option>
+                      {periods.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      选择期间后将自动生成 DRAFT 凭证：借 资产减值损失 / 贷 固定资产减值准备（1603）
+                    </p>
+                  </div>
+                )}
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setOpen(false)}
+                    className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted">取消</button>
+                  <button type="submit" disabled={loading}
+                    className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50">
+                    {loading ? "处理中..." : "确认计提减值"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

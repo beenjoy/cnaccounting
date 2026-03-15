@@ -91,6 +91,10 @@ export default async function ConsolidationGroupPage({
             className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
             合并利润表
           </Link>
+          <Link href={`/consolidation/${id}/cash-flow`}
+            className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
+            合并现金流量表
+          </Link>
         </div>
       </div>
 
