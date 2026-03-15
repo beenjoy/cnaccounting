@@ -128,6 +128,7 @@ const assetItems: NavItem[] = [
 const vatItems: NavItem[] = [
   { href: "/vat/records", label: "进销项台账", icon: FileBadge },
   { href: "/vat/declaration", label: "增值税申报", icon: ClipboardCheck },
+  { href: "/reports/vat-summary", label: "增值税汇总表", icon: BarChart3 },
 ];
 
 const consolidationItems: NavItem[] = [

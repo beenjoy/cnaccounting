@@ -6,6 +6,7 @@ import {
   loadGroupInfo,
   computeConsolidatedPeriodBalances,
   computeConsolidatedBalances,
+  computeNCIAndElimination,
   type ConsolidationMemberInfo,
 } from "@/lib/consolidation-utils";
 
@@ -71,6 +72,14 @@ export default async function ConsolidatedIncomeStatementPage({
   const periodBalances = await computeConsolidatedPeriodBalances(fullMembers, year, month);
   // YTD P&L (cumulative from start of year)
   const ytdBalances = await computeConsolidatedBalances(fullMembers, year, month);
+
+  // CAS 33: NCI profit attribution
+  const hasMultipleMembers = fullMembers.length > 1;
+  const nci = hasMultipleMembers
+    ? await computeNCIAndElimination(fullMembers, year, month)
+    : { nciProfitPeriod: 0, nciProfitYtd: 0, nciEquityTotal: 0,
+        eliminatedAssets: 0, eliminatedEquity: 0, goodwillTotal: 0,
+        hasInvestmentData: false, details: [] };
 
   // Filter to revenue/expense only
   const IS_TYPES = ["REVENUE", "EXPENSE"];
@@ -270,14 +279,55 @@ export default async function ConsolidatedIncomeStatementPage({
                   {fmt(ytdMetrics.netProfit)}
                 </td>
               </tr>
+              {/* CAS 33: NCI profit attribution — only when there are non-wholly-owned subsidiaries */}
+              {hasMultipleMembers && (nci.nciProfitPeriod !== 0 || nci.nciProfitYtd !== 0) && (
+                <>
+                  <tr className="border-t text-sm">
+                    <td className="px-4 py-2 pl-8 text-muted-foreground">
+                      其中：归属母公司所有者的净利润
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                      {fmt(periodMetrics.netProfit - nci.nciProfitPeriod)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                      {fmt(ytdMetrics.netProfit - nci.nciProfitYtd)}
+                    </td>
+                  </tr>
+                  <tr className="text-sm">
+                    <td className="px-4 py-2 pl-8 text-muted-foreground">
+                      少数股东损益
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-indigo-600">
+                      {fmt(nci.nciProfitPeriod)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-indigo-600">
+                      {fmt(nci.nciProfitYtd)}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tfoot>
           </table>
         </div>
       )}
 
       {fullMembers.length > 1 && (
-        <div className="no-print bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-amber-800">
-          <strong>注意：</strong>本报表为简单加总合并，尚未消除集团内部交易收入/成本。如需精确合并报表，请在录入凭证时标记内部交易。
+        <div className={`no-print rounded-lg border p-4 text-xs ${
+          nci.nciProfitPeriod !== 0 || nci.nciProfitYtd !== 0
+            ? "bg-blue-50 border-blue-200 text-blue-800"
+            : "bg-amber-50 border-amber-200 text-amber-800"
+        }`}>
+          {nci.nciProfitPeriod !== 0 || nci.nciProfitYtd !== 0 ? (
+            <>
+              <strong>CAS 33 调整说明：</strong>净利润已在归属母公司与少数股东之间按持股比例分配。
+              内部往来交易（销售收入/成本等）尚未自动消除，请在录入凭证时正确标记内部交易。
+            </>
+          ) : (
+            <>
+              <strong>注意：</strong>所有子公司为全资子公司（持股100%），无少数股东损益。
+              内部往来交易尚未自动消除，请在录入凭证时标记内部交易（isIntercompany）。
+            </>
+          )}
         </div>
       )}
     </div>
