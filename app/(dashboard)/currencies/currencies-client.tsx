@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -91,7 +90,7 @@ export function CurrenciesClient({ currencies: initial, exchangeRates: initialRa
   const { register: regC, handleSubmit: handleC, reset: resetC, formState: { errors: errorsC } } =
     useForm<CurrencyForm>({ resolver: zodResolver(currencySchema), defaultValues: { decimals: 2 } });
 
-  const { register: regR, handleSubmit: handleR, reset: resetR, setValue: setRateValue, watch: watchR, formState: { errors: errorsR } } =
+  const { register: regR, handleSubmit: handleR, reset: resetR, formState: { errors: errorsR } } =
     useForm<RateForm>({
       resolver: zodResolver(rateSchema),
       defaultValues: {

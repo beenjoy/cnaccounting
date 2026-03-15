@@ -42,7 +42,7 @@ export async function POST() {
   });
 
   if (activeCurrencies.length === 0) {
-    return NextResponse.json({ synced: 0, date: "", skipped: [], rates: [] });
+    return NextResponse.json({ synced: 0, date: "", syncedCurrencies: [], skipped: [] });
   }
 
   // 从 Frankfurter 获取 ECB 汇率（EUR 为基准）
