@@ -12,6 +12,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { PrintButton } from "@/components/ui/print-button";
 import {
   loadGroupInfo,
   computeConsolidatedBalances,
@@ -197,12 +198,7 @@ export default async function ConsolidatedBalanceSheetPage({
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">合并资产负债表</h1>
-          <button
-            onClick={() => typeof window !== "undefined" && window.print()}
-            className="no-print rounded-md border px-4 py-2 text-sm hover:bg-muted"
-          >
-            打印
-          </button>
+          <PrintButton />
         </div>
         <p className="text-sm text-muted-foreground mt-1">
           {group.name} · 截至 {year}年{month}月末 · 合并范围：{fullMembers.map((m) => m.companyName).join("、")}

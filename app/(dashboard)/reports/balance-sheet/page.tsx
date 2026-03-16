@@ -96,18 +96,26 @@ export default async function BalanceSheetPage({
       e.totalCredit += toNum(line.creditAmountLC);
     }
     return Array.from(map.values())
-      .map((acc) => ({
-        accountId: acc.accountId,
-        accountCode: acc.code,
-        accountName: acc.name,
-        accountType: acc.type,
-        normalBalance: acc.normalBalance,
-        reportCategory: acc.reportCategory,
-        balance:
+      .map((acc) => {
+        const rawBalance =
           acc.normalBalance === "DEBIT"
             ? acc.totalDebit - acc.totalCredit
-            : acc.totalCredit - acc.totalDebit,
-      }))
+            : acc.totalCredit - acc.totalDebit;
+        // 对冲资产科目（如累计折旧：ASSET类型但贷方正向余额）在资产负债表中应为负值，以正确抵减资产合计
+        const balance =
+          acc.type === "ASSET" && acc.normalBalance === "CREDIT"
+            ? -rawBalance
+            : rawBalance;
+        return {
+          accountId: acc.accountId,
+          accountCode: acc.code,
+          accountName: acc.name,
+          accountType: acc.type,
+          normalBalance: acc.normalBalance,
+          reportCategory: acc.reportCategory,
+          balance,
+        };
+      })
       .sort((a, b) => a.accountCode.localeCompare(b.accountCode));
   }
 

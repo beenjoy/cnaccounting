@@ -1,7 +1,9 @@
+import React from "react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { PrintButton } from "@/components/ui/print-button";
 import {
   loadGroupInfo,
   computeConsolidatedBalances,
@@ -101,8 +103,7 @@ export default async function ConsolidatedTrialBalancePage({
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">合并试算表</h1>
-          <button onClick={() => typeof window !== "undefined" && window.print()}
-            className="no-print rounded-md border px-4 py-2 text-sm hover:bg-muted">打印</button>
+          <PrintButton />
         </div>
         <p className="text-sm text-muted-foreground mt-1">
           {group.name} · 截至 {year}年{month}月末 · 合并范围：{fullMembers.map(m => m.companyName).join("、")}
@@ -154,8 +155,8 @@ export default async function ConsolidatedTrialBalancePage({
                 const rows = byType.get(accountType)!;
                 const typeTotal = rows.reduce((s, b) => s + b.balance, 0);
                 return (
-                  <>
-                    <tr key={`${accountType}-header`} className="bg-muted/30">
+                  <React.Fragment key={accountType}>
+                    <tr className="bg-muted/30">
                       <td colSpan={2 + fullMembers.length + 1}
                         className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
                         {ACCOUNT_TYPE_LABELS[accountType] ?? accountType}
@@ -177,7 +178,7 @@ export default async function ConsolidatedTrialBalancePage({
                         <td className="px-4 py-2 text-right font-mono font-medium">{fmt(b.balance)}</td>
                       </tr>
                     ))}
-                    <tr key={`${accountType}-total`} className="bg-muted/10 font-medium">
+                    <tr className="bg-muted/10 font-medium">
                       <td colSpan={2} className="px-4 py-2 text-right text-muted-foreground">
                         小计
                       </td>
@@ -188,7 +189,7 @@ export default async function ConsolidatedTrialBalancePage({
                       ))}
                       <td className="px-4 py-2 text-right font-mono">{fmt(typeTotal)}</td>
                     </tr>
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

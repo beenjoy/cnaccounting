@@ -140,7 +140,11 @@ export default async function APInvoicesPage({
                 const st = STATUS_LABELS[inv.status] ?? { label: inv.status, cls: "bg-gray-100 text-gray-600" };
                 return (
                   <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link href={`/ap/invoices/${inv.id}`} className="text-primary hover:underline">
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-muted-foreground mr-1">{inv.vendor.code}</span>
                       {inv.vendor.name}
@@ -159,7 +163,7 @@ export default async function APInvoicesPage({
                     </td>
                     <td className="px-4 py-3 text-center">
                       {canEdit && !["PAID", "CANCELLED"].includes(inv.status) && (
-                        <APInvoiceActions companyId={company.id} vendors={vendors} mode="cancel" invoice={inv} />
+                        <APInvoiceActions companyId={company.id} vendors={vendors} mode="cancel" invoice={{ id: inv.id, invoiceNumber: inv.invoiceNumber, status: inv.status }} />
                       )}
                     </td>
                   </tr>

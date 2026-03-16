@@ -143,7 +143,11 @@ export default async function ARInvoicesPage({
                 const st = STATUS_LABELS[inv.status] ?? { label: inv.status, cls: "bg-gray-100 text-gray-600" };
                 return (
                   <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link href={`/ar/invoices/${inv.id}`} className="text-primary hover:underline">
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-muted-foreground mr-1">{inv.customer.code}</span>
                       {inv.customer.name}
@@ -166,7 +170,7 @@ export default async function ARInvoicesPage({
                           companyId={company.id}
                           customers={customers}
                           mode="cancel"
-                          invoice={inv}
+                          invoice={{ id: inv.id, invoiceNumber: inv.invoiceNumber, status: inv.status }}
                         />
                       )}
                     </td>

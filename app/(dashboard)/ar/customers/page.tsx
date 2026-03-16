@@ -99,10 +99,10 @@ export default async function CustomersPage() {
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       {canEdit && (
-                        <CustomerActions companyId={company.id} mode="edit" customer={c} />
+                        <CustomerActions companyId={company.id} mode="edit" customer={{ ...c, creditLimit: Number(c.creditLimit) }} />
                       )}
                       {canDelete && (
-                        <CustomerActions companyId={company.id} mode="delete" customer={c} />
+                        <CustomerActions companyId={company.id} mode="delete" customer={{ ...c, creditLimit: Number(c.creditLimit) }} />
                       )}
                     </div>
                   </td>

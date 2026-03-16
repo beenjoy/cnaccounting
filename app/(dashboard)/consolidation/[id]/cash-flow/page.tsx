@@ -13,6 +13,7 @@ import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Decimal } from "@prisma/client/runtime/library";
+import { PrintButton } from "@/components/ui/print-button";
 import {
   loadGroupInfo,
   type ConsolidationMemberInfo,
@@ -260,10 +261,7 @@ export default async function ConsolidatedCashFlowPage({
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">合并现金流量表</h1>
-          <button
-            onClick={() => typeof window !== "undefined" && window.print()}
-            className="no-print rounded-md border px-4 py-2 text-sm hover:bg-muted"
-          >打印</button>
+          <PrintButton />
         </div>
         <p className="text-sm text-muted-foreground mt-1">
           {group.name} · {year}年1–{month}月（累计） · 合并范围：{fullMembers.map((m) => m.companyName).join("、")}

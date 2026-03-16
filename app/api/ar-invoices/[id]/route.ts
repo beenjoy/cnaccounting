@@ -32,6 +32,12 @@ export async function PUT(
   }
 
   const body = await req.json() as {
+    action?: string;
+    // record_payment 字段
+    amount?: number;
+    matchedDate?: string;
+    notes?: string;
+    // 通用更新字段
     invoiceDate?: string;
     dueDate?: string;
     subtotal?: number;
@@ -40,19 +46,48 @@ export async function PUT(
     status?: string;
   };
 
-  const subtotal = body.subtotal ?? parseFloat(invoice.subtotal.toString());
+  // ── 收款登记操作 ─────────────────────────────────────────────────────────────
+  if (body.action === "record_payment") {
+    const amount = body.amount;
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "收款金额无效" }, { status: 400 });
+    }
+    if (!body.matchedDate) {
+      return NextResponse.json({ error: "请提供收款日期" }, { status: 400 });
+    }
+
+    const currentPaid = parseFloat(invoice.paidAmount.toString());
+    const totalAmt    = parseFloat(invoice.totalAmount.toString());
+    const newPaid     = currentPaid + amount;
+
+    if (newPaid > totalAmt + 0.001) {
+      return NextResponse.json({ error: "收款金额超过发票未收余额" }, { status: 400 });
+    }
+
+    const newStatus = newPaid >= totalAmt - 0.001 ? "PAID" : "PARTIAL";
+
+    await db.aRInvoice.update({
+      where: { id },
+      data: { paidAmount: newPaid, status: newStatus as never },
+    });
+
+    return NextResponse.json({ success: true, paidAmount: newPaid, status: newStatus });
+  }
+
+  // ── 通用字段更新 ─────────────────────────────────────────────────────────────
+  const subtotal  = body.subtotal  ?? parseFloat(invoice.subtotal.toString());
   const taxAmount = body.taxAmount ?? parseFloat(invoice.taxAmount.toString());
 
   const updated = await db.aRInvoice.update({
     where: { id },
     data: {
       invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : undefined,
-      dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      subtotal: body.subtotal,
-      taxAmount: body.taxAmount,
+      dueDate:     body.dueDate     ? new Date(body.dueDate)     : undefined,
+      subtotal:    body.subtotal,
+      taxAmount:   body.taxAmount,
       totalAmount: subtotal + taxAmount,
       description: body.description,
-      status: body.status as never,
+      status:      body.status as never,
     },
   });
 

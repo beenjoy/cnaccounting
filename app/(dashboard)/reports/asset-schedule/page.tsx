@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { PrintButton } from "@/components/ui/print-button";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BUILDINGS: "房屋建筑物",
@@ -123,8 +124,7 @@ export default async function AssetSchedulePage({ searchParams }: { searchParams
           <h1 className="text-2xl font-bold tracking-tight">固定资产折旧明细表</h1>
           <p className="text-sm text-muted-foreground mt-1">{company.name}</p>
         </div>
-        <button onClick={() => typeof window !== "undefined" && window.print()}
-          className="no-print rounded-md border px-4 py-2 text-sm hover:bg-muted">打印</button>
+        <PrintButton />
       </div>
 
       {/* Filters */}

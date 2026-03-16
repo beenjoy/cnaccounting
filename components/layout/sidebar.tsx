@@ -36,6 +36,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  ownerOnly?: boolean;
 }
 
 interface SectionDef {
@@ -130,7 +131,7 @@ const SECTIONS: SectionDef[] = [
       { href: "/settings/group-accounts", label: "集团科目表", icon: Network },
       { href: "/settings/organization", label: "组织设置", icon: Building2 },
       { href: "/settings/companies", label: "公司管理", icon: Building2 },
-      { href: "/settings/permissions", label: "权限管理", icon: ShieldCheck },
+      { href: "/settings/permissions", label: "权限管理", icon: ShieldCheck, ownerOnly: true },
       { href: "/settings/audit-log", label: "审计日志", icon: Users },
     ],
   },
@@ -231,7 +232,7 @@ function CollapsibleSection({
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
 
   // Initialize: open the section containing the current route
@@ -284,15 +285,21 @@ export function Sidebar() {
           </Link>
 
           {/* Collapsible sections */}
-          {SECTIONS.map((section) => (
-            <CollapsibleSection
-              key={section.id}
-              section={section}
-              isOpen={openSections.has(section.id)}
-              onToggle={() => toggleSection(section.id)}
-              pathname={pathname}
-            />
-          ))}
+          {SECTIONS.map((section) => {
+            const filteredItems = section.items.filter(
+              (item) => !item.ownerOnly || role === "OWNER"
+            );
+            if (filteredItems.length === 0) return null;
+            return (
+              <CollapsibleSection
+                key={section.id}
+                section={{ ...section, items: filteredItems }}
+                isOpen={openSections.has(section.id)}
+                onToggle={() => toggleSection(section.id)}
+                pathname={pathname}
+              />
+            );
+          })}
         </nav>
 
         {/* Bottom version indicator */}

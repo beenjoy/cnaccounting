@@ -41,7 +41,7 @@ export default async function DashboardLayout({
         organizationName={membership.organization.name}
         companyName={company?.name}
       />
-      <Sidebar />
+      <Sidebar role={membership.role} />
       <main className="ml-60 pt-14 min-h-screen print:ml-0 print:pt-0">
         <div className="p-6 print:p-0">{children}</div>
       </main>

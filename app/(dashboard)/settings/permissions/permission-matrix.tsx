@@ -72,6 +72,18 @@ export function PermissionMatrix({ initialMatrix, allResources, allActions }: Pr
     // 持久化到服务器
     const saveKey = `${selectedRole}:${resource}`;
     setSavingKey(saveKey);
+
+    // 从服务端拉取最新状态（用于失败时恢复，避免 stale closure）
+    async function fetchFresh() {
+      try {
+        const freshRes = await fetch("/api/role-policies");
+        if (freshRes.ok) {
+          const fresh = await freshRes.json() as { matrix: PolicyRow[] };
+          setMatrix(fresh.matrix);
+        }
+      } catch { /* 二次拉取失败，维持乐观更新 */ }
+    }
+
     startTransition(async () => {
       try {
         const res = await fetch("/api/role-policies", {
@@ -81,13 +93,13 @@ export function PermissionMatrix({ initialMatrix, allResources, allActions }: Pr
         });
         if (!res.ok) {
           const data = await res.json() as { error?: string };
-          showToast(data.error ?? "保存失败", false);
-          // 回滚
-          setMatrix(initialMatrix);
+          showToast(data.error ?? "保存失败，请重试", false);
+          await fetchFresh();
         }
-      } catch {
-        showToast("网络错误，请重试", false);
-        setMatrix(initialMatrix);
+      } catch (err) {
+        const msg = err instanceof TypeError ? "网络连接失败，请检查服务器" : "保存失败，请重试";
+        showToast(msg, false);
+        await fetchFresh();
       } finally {
         setSavingKey(null);
       }
