@@ -9,11 +9,17 @@ export default async function NewJournalPage() {
 
   const membership = await db.organizationMember.findFirst({
     where: { userId: session.user.id },
-    include: { organization: { include: { companies: { where: { isActive: true }, take: 1 } } } },
+    include: { organization: { include: { companies: { where: { isActive: true } } } } },
   });
 
-  const company = membership?.organization.companies[0];
+  const companies = membership?.organization.companies ?? [];
+  const company = companies[0];
   if (!company) redirect("/settings/companies");
+
+  // 同集团其他公司（供内部交易标记）
+  const siblingCompanies = companies
+    .filter((c) => c.id !== company.id)
+    .map((c) => ({ id: c.id, name: c.name, code: c.code }));
 
   // 获取所有期间（含已关闭，供日期匹配和状态提示）
   const openPeriods = await db.fiscalPeriod.findMany({
@@ -95,6 +101,7 @@ export default async function NewJournalPage() {
         }))}
         exchangeRates={exchangeRateMap}
         functionalCurrency={company.functionalCurrency}
+        siblingCompanies={siblingCompanies}
         templates={templates.map((t) => ({
           id: t.id,
           name: t.name,

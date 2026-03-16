@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { Building2, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,9 +60,11 @@ export function Header({ user, organizationName, companyName }: HeaderProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
-            账户设置
+          <DropdownMenuItem asChild>
+            <Link href="/settings/account" className="flex items-center cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              账户设置
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

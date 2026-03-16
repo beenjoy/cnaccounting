@@ -12,7 +12,12 @@ export default function LoginPage() {
           </p>
         </div>
         <LoginForm />
-        <div className="mt-4 text-center text-sm text-muted-foreground">
+        <div className="mt-3 text-right">
+          <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-blue-600">
+            忘记密码？
+          </Link>
+        </div>
+        <div className="mt-3 text-center text-sm text-muted-foreground">
           还没有账号？{" "}
           <Link href="/register" className="text-blue-600 hover:underline">
             立即注册

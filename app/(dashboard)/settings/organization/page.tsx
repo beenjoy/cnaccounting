@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { InviteCodeCard } from "./invite-code-card";
 import { MemberRoleSelector } from "./member-role-selector";
+import { ResetPasswordButton } from "./reset-password-button";
 
 export default async function OrganizationSettingsPage() {
   const session = await auth();
@@ -26,6 +27,7 @@ export default async function OrganizationSettingsPage() {
   const org = membership.organization;
   const canSeeInviteCode = membership.role === "OWNER" || membership.role === "ADMIN";
   const canManageRoles = membership.role === "OWNER";
+  const canResetPassword = membership.role === "OWNER" || membership.role === "ADMIN";
 
   const roleLabel: Record<string, string> = {
     OWNER: "所有者",
@@ -74,6 +76,7 @@ export default async function OrganizationSettingsPage() {
               const isSelf = m.userId === session.user!.id;
               const isOwner = m.role === "OWNER";
               const showSelector = canManageRoles && !isSelf && !isOwner;
+              const showReset = canResetPassword && !isSelf;
               return (
                 <div key={m.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
@@ -83,13 +86,21 @@ export default async function OrganizationSettingsPage() {
                     </p>
                     <p className="text-xs text-muted-foreground">{m.user.email}</p>
                   </div>
-                  {showSelector ? (
-                    <MemberRoleSelector memberId={m.id} currentRole={m.role} />
-                  ) : (
-                    <Badge variant={isOwner ? "default" : "secondary"}>
-                      {roleLabel[m.role]}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {showReset && (
+                      <ResetPasswordButton
+                        memberId={m.id}
+                        userName={m.user.name || m.user.email || ""}
+                      />
+                    )}
+                    {showSelector ? (
+                      <MemberRoleSelector memberId={m.id} currentRole={m.role} />
+                    ) : (
+                      <Badge variant={isOwner ? "default" : "secondary"}>
+                        {roleLabel[m.role]}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               );
             })}

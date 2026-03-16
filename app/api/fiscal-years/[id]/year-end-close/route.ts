@@ -46,11 +46,11 @@ export async function POST(
       return NextResponse.json({ error: "该年度已完成年末结账" }, { status: 400 });
     }
 
-    // ── 4. 全部期间必须为 CLOSED ──────────────────────────────────────
-    const openPeriods = fiscalYear.periods.filter((p) => p.status === "OPEN");
-    if (openPeriods.length > 0) {
+    // ── 4. 全部期间必须为 CLOSED（OPEN 和 SOFT_CLOSE 均不允许年末结账）──
+    const unclosedPeriods = fiscalYear.periods.filter((p) => p.status !== "CLOSED");
+    if (unclosedPeriods.length > 0) {
       return NextResponse.json(
-        { error: `尚有 ${openPeriods.length} 个未关闭的会计期间，请先关闭所有期间` },
+        { error: `尚有 ${unclosedPeriods.length} 个未完全关闭的会计期间（含软关账），请先硬关账所有期间` },
         { status: 400 }
       );
     }

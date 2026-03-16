@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkPermission } from "@/lib/permissions";
 
 // GET /api/fixed-assets?companyId=xxx&status=ACTIVE&category=ELECTRONICS
 export async function GET(req: NextRequest) {
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
   if (!member || !["OWNER", "ADMIN", "ACCOUNTANT"].includes(member.role)) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
+
+  const canCreate = await checkPermission(session.user.id, company.organizationId, "FIXED_ASSET", "CREATE", companyId);
+  if (!canCreate) return NextResponse.json({ error: "权限不足：无法创建固定资产" }, { status: 403 });
 
   // Generate asset number
   const year = new Date(body.acquisitionDate).getFullYear();

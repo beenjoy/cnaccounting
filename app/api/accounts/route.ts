@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { checkPermission } from "@/lib/permissions";
 
 const REPORT_CATEGORIES = [
   "CURRENT_ASSET", "NON_CURRENT_ASSET",
@@ -37,6 +38,15 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+
+    // 权限检查
+    const company = await db.company.findUnique({
+      where: { id: data.companyId },
+      select: { organizationId: true },
+    });
+    if (!company) return NextResponse.json({ error: "公司不存在" }, { status: 404 });
+    const canCreate = await checkPermission(session.user.id, company.organizationId, "CHART_OF_ACCOUNT", "CREATE", data.companyId);
+    if (!canCreate) return NextResponse.json({ error: "权限不足：无法创建科目" }, { status: 403 });
 
     // 检查编码是否重复
     const existing = await db.chartOfAccount.findFirst({

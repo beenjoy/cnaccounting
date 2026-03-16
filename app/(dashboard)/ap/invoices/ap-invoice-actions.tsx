@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Vendor { id: string; code: string; name: string; }
-interface Invoice { id: string; invoiceNumber: string; }
+interface Invoice { id: string; invoiceNumber: string; status: string; }
 
 interface Props {
   companyId: string;

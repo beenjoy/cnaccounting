@@ -6,6 +6,9 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+e2e/fixtures/.auth
 
 # next.js
 /.next/
@@ -26,6 +29,10 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+
+# claude code local config
+.claude/settings.local.json
+.claude/worktrees/
 
 # vercel
 .vercel

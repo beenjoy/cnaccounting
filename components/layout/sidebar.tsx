@@ -30,6 +30,7 @@ import {
   Settings2,
   ChevronRight,
   Network,
+  UserCog,
 } from "lucide-react";
 
 interface NavItem {
@@ -128,6 +129,7 @@ const SECTIONS: SectionDef[] = [
     label: "系统设置",
     icon: Settings2,
     items: [
+      { href: "/settings/account", label: "账户设置", icon: UserCog },
       { href: "/settings/group-accounts", label: "集团科目表", icon: Network },
       { href: "/settings/organization", label: "组织设置", icon: Building2 },
       { href: "/settings/companies", label: "公司管理", icon: Building2 },

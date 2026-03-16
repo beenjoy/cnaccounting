@@ -35,6 +35,10 @@ function buildDefaults(): Record<string, Set<PolicyAction>> {
     ["OWNER", "COMPANY",          all],
     ["OWNER", "MEMBER",           all],
     ["OWNER", "CURRENCY",         all],
+    ["OWNER", "FIXED_ASSET",      all],
+    ["OWNER", "AR_INVOICE",       all],
+    ["OWNER", "AP_INVOICE",       all],
+    ["OWNER", "VAT_RECORD",       all],
 
     // ADMIN — 除 MEMBER.DELETE 外的所有
     ["ADMIN", "JOURNAL_ENTRY",    all],
@@ -44,6 +48,10 @@ function buildDefaults(): Record<string, Set<PolicyAction>> {
     ["ADMIN", "COMPANY",          ["READ", "CREATE", "UPDATE"]],
     ["ADMIN", "MEMBER",           ["READ", "CREATE", "UPDATE"]],
     ["ADMIN", "CURRENCY",         all],
+    ["ADMIN", "FIXED_ASSET",      all],
+    ["ADMIN", "AR_INVOICE",       all],
+    ["ADMIN", "AP_INVOICE",       all],
+    ["ADMIN", "VAT_RECORD",       all],
 
     // ACCOUNTANT
     ["ACCOUNTANT", "JOURNAL_ENTRY",    ["READ", "CREATE", "UPDATE", "SUBMIT"]],
@@ -53,6 +61,10 @@ function buildDefaults(): Record<string, Set<PolicyAction>> {
     ["ACCOUNTANT", "COMPANY",          ["READ"]],
     ["ACCOUNTANT", "MEMBER",           []],
     ["ACCOUNTANT", "CURRENCY",         ["READ"]],
+    ["ACCOUNTANT", "FIXED_ASSET",      ["READ", "CREATE", "UPDATE"]],
+    ["ACCOUNTANT", "AR_INVOICE",       ["READ", "CREATE", "UPDATE"]],
+    ["ACCOUNTANT", "AP_INVOICE",       ["READ", "CREATE", "UPDATE"]],
+    ["ACCOUNTANT", "VAT_RECORD",       ["READ", "CREATE", "UPDATE"]],
 
     // AUDITOR — 全只读
     ["AUDITOR", "JOURNAL_ENTRY",    ["READ"]],
@@ -62,6 +74,10 @@ function buildDefaults(): Record<string, Set<PolicyAction>> {
     ["AUDITOR", "COMPANY",          ["READ"]],
     ["AUDITOR", "MEMBER",           ["READ"]],
     ["AUDITOR", "CURRENCY",         ["READ"]],
+    ["AUDITOR", "FIXED_ASSET",      ["READ"]],
+    ["AUDITOR", "AR_INVOICE",       ["READ"]],
+    ["AUDITOR", "AP_INVOICE",       ["READ"]],
+    ["AUDITOR", "VAT_RECORD",       ["READ"]],
 
     // PERIOD_MANAGER
     ["PERIOD_MANAGER", "JOURNAL_ENTRY",    ["READ"]],
@@ -71,6 +87,10 @@ function buildDefaults(): Record<string, Set<PolicyAction>> {
     ["PERIOD_MANAGER", "COMPANY",          ["READ"]],
     ["PERIOD_MANAGER", "MEMBER",           []],
     ["PERIOD_MANAGER", "CURRENCY",         ["READ"]],
+    ["PERIOD_MANAGER", "FIXED_ASSET",      ["READ"]],
+    ["PERIOD_MANAGER", "AR_INVOICE",       ["READ"]],
+    ["PERIOD_MANAGER", "AP_INVOICE",       ["READ"]],
+    ["PERIOD_MANAGER", "VAT_RECORD",       ["READ"]],
   ];
 
   const result: Record<string, Set<PolicyAction>> = {};
@@ -156,6 +176,10 @@ export const ALL_RESOURCES: PolicyResource[] = [
   "COMPANY",
   "MEMBER",
   "CURRENCY",
+  "FIXED_ASSET",
+  "AR_INVOICE",
+  "AP_INVOICE",
+  "VAT_RECORD",
 ];
 
 export const ALL_ACTIONS: PolicyAction[] = [
@@ -177,6 +201,10 @@ export const RESOURCE_LABELS: Record<PolicyResource, string> = {
   COMPANY:          "公司管理",
   MEMBER:           "成员管理",
   CURRENCY:         "货币汇率",
+  FIXED_ASSET:      "固定资产",
+  AR_INVOICE:       "应收发票",
+  AP_INVOICE:       "应付发票",
+  VAT_RECORD:       "增值税记录",
 };
 
 export const ACTION_LABELS: Record<PolicyAction, string> = {

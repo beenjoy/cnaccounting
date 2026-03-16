@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkPermission } from "@/lib/permissions";
 
 // ── PUT /api/ar-invoices/[id] ───────────────────────────────────────────────
 export async function PUT(
@@ -25,6 +26,9 @@ export async function PUT(
     },
   });
   if (!membership) return NextResponse.json({ error: "无权修改" }, { status: 403 });
+
+  const canUpdate = await checkPermission(session.user.id, invoice.company.organizationId, "AR_INVOICE", "UPDATE", invoice.companyId);
+  if (!canUpdate) return NextResponse.json({ error: "权限不足：无法修改应收发票" }, { status: 403 });
 
   // 已全额核销的发票不允许修改
   if (invoice.status === "PAID" || invoice.status === "CANCELLED") {

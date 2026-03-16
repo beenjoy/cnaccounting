@@ -48,6 +48,8 @@ type LineItem = {
   creditAmount: string;
   currency: string;
   exchangeRate: string;
+  isIntercompany: boolean;
+  counterpartyCompanyId: string;
 };
 
 type TemplateLine = {
@@ -66,6 +68,8 @@ type Template = {
   lines: TemplateLine[];
 };
 
+type SiblingCompany = { id: string; name: string; code: string };
+
 interface JournalEntryFormProps {
   companyId: string;
   openPeriods: Period[];
@@ -75,6 +79,7 @@ interface JournalEntryFormProps {
   exchangeRates?: Record<string, string>;
   functionalCurrency?: string;
   templates?: Template[];
+  siblingCompanies?: SiblingCompany[];
 }
 
 const emptyLine = (currency = "CNY"): LineItem => ({
@@ -85,6 +90,8 @@ const emptyLine = (currency = "CNY"): LineItem => ({
   creditAmount: "",
   currency,
   exchangeRate: "1",
+  isIntercompany: false,
+  counterpartyCompanyId: "",
 });
 
 export function JournalEntryForm({
@@ -96,6 +103,7 @@ export function JournalEntryForm({
   exchangeRates = {},
   functionalCurrency = "CNY",
   templates = [],
+  siblingCompanies = [],
 }: JournalEntryFormProps) {
   const router = useRouter();
   const [description, setDescription] = useState("");
@@ -134,6 +142,8 @@ export function JournalEntryForm({
         description: l.description ?? "",
         debitAmount:  l.direction === "DEBIT"  ? "" : "",
         creditAmount: l.direction === "CREDIT" ? "" : "",
+        isIntercompany: false,
+        counterpartyCompanyId: "",
         currency: functionalCurrency,
         exchangeRate: "1",
       };
@@ -166,14 +176,14 @@ export function JournalEntryForm({
   };
 
   const updateLine = useCallback(
-    (key: string, field: keyof LineItem, value: string) => {
+    (key: string, field: keyof LineItem, value: string | boolean) => {
       setLines((prev) =>
         prev.map((l) => {
           if (l.key !== key) return l;
           const updated = { ...l, [field]: value };
           if (field === "debitAmount" && value !== "") updated.creditAmount = "";
           else if (field === "creditAmount" && value !== "") updated.debitAmount = "";
-          if (field === "currency") {
+          if (field === "currency" && typeof value === "string") {
             updated.exchangeRate =
               value === functionalCurrency ? "1" : (exchangeRates[value] ?? "1");
           }
@@ -213,6 +223,8 @@ export function JournalEntryForm({
             creditAmount: l.creditAmount || "0",
             currency: l.currency,
             exchangeRate: l.exchangeRate || "1",
+            isIntercompany: l.isIntercompany,
+            counterpartyCompanyId: l.isIntercompany && l.counterpartyCompanyId ? l.counterpartyCompanyId : undefined,
           })),
         }),
       });
@@ -401,6 +413,7 @@ export function JournalEntryForm({
                   <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">借方金额</th>
                   <th className="text-right px-4 py-2 font-medium text-muted-foreground w-36">贷方金额</th>
                   <th className="text-center px-4 py-2 font-medium text-muted-foreground w-20">货币</th>
+                  {siblingCompanies.length > 0 && <th className="text-center px-2 py-2 font-medium text-muted-foreground w-24">内部交易</th>}
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -487,6 +500,34 @@ export function JournalEntryForm({
                           </div>
                         )}
                       </td>
+                      {/* 内部交易标记（仅多公司时显示） */}
+                      {siblingCompanies.length > 0 && (
+                        <td className="px-2 py-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="flex items-center gap-1 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 accent-primary"
+                                checked={line.isIntercompany}
+                                onChange={(e) => updateLine(line.key, "isIntercompany", e.target.checked)}
+                              />
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">内部交易</span>
+                            </label>
+                            {line.isIntercompany && (
+                              <select
+                                className="h-7 text-xs rounded border border-input bg-background px-1 focus:outline-none focus:ring-1 focus:ring-ring"
+                                value={line.counterpartyCompanyId}
+                                onChange={(e) => updateLine(line.key, "counterpartyCompanyId", e.target.value)}
+                              >
+                                <option value="">-- 对方公司 --</option>
+                                {siblingCompanies.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.code} {c.name}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </td>
+                      )}
                       <td className="px-2 py-2">
                         <Button
                           variant="ghost"

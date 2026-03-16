@@ -21,6 +21,7 @@ interface CashFlowReportProps {
   cashFlowItems: CashFlowItem[];
   openingBalance: number;
   companyName: string;
+  currentMethod?: "direct" | "indirect";
 }
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -45,6 +46,7 @@ export function CashFlowReport({
   cashFlowItems,
   openingBalance,
   companyName,
+  currentMethod = "direct",
 }: CashFlowReportProps) {
   const router = useRouter();
 
@@ -196,6 +198,21 @@ export function CashFlowReport({
                 {autoClassifiedCount} 笔自动归类
               </Badge>
             )}
+            {/* 方法切换 */}
+            <div className="flex rounded-lg border overflow-hidden text-sm">
+              <a
+                href={`?periodId=${selectedPeriodId}&method=direct`}
+                className={`px-4 py-1.5 ${currentMethod === "direct" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-muted/50"}`}
+              >
+                直接法
+              </a>
+              <a
+                href={`?periodId=${selectedPeriodId}&method=indirect`}
+                className={`px-4 py-1.5 ${currentMethod === "indirect" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-muted/50"}`}
+              >
+                间接法
+              </a>
+            </div>
             <button
               onClick={() => window.print()}
               className="ml-auto text-sm px-3 py-1.5 rounded-md border border-input bg-background hover:bg-accent transition-colors"

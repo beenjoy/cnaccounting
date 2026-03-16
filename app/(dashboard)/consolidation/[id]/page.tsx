@@ -95,6 +95,14 @@ export default async function ConsolidationGroupPage({
             className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
             合并现金流量表
           </Link>
+          <Link href={`/consolidation/${id}/equity-statement`}
+            className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
+            权益变动表
+          </Link>
+          <Link href={`/consolidation/${id}/intercompany`}
+            className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
+            内部交易核对
+          </Link>
           <Link href={`/consolidation/${id}/group-mapping`}
             className="rounded-md border px-4 py-2 text-sm hover:bg-muted">
             集团科目对照

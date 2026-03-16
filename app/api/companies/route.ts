@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { initChartOfAccounts } from "@/app/api/auth/register/route";
+import { checkPermission } from "@/lib/permissions";
 
 const createCompanySchema = z.object({
   name: z.string().min(2, "公司名称至少2个字符"),
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest) {
     if (!membership) {
       return NextResponse.json({ error: "无权限创建公司" }, { status: 403 });
     }
+
+    const canCreate = await checkPermission(session.user.id, membership.organizationId, "COMPANY", "CREATE");
+    if (!canCreate) return NextResponse.json({ error: "权限不足：无法创建公司" }, { status: 403 });
 
     const companyCode = `COMP-${Date.now()}`;
 

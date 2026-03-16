@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import Decimal from "decimal.js";
+import { checkPermission } from "@/lib/permissions";
 
 const schema = z.object({
   action: z.enum(["approve", "reject", "post", "reverse"]),
@@ -51,6 +52,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       );
     }
 
+    // 权限检查：approve/post 需要 APPROVE 权限，reverse 需要 DELETE 权限
+    const company = await db.company.findUnique({ where: { id: entry.companyId }, select: { organizationId: true } });
+    if (company) {
+      const orgId = company.organizationId;
+      if (action === "approve" || action === "post") {
+        const canApprove = await checkPermission(session.user.id, orgId, "JOURNAL_ENTRY", "APPROVE", entry.companyId);
+        if (!canApprove) return NextResponse.json({ error: "权限不足：无法审批/过账凭证" }, { status: 403 });
+      }
+      if (action === "reverse") {
+        const canDelete = await checkPermission(session.user.id, orgId, "JOURNAL_ENTRY", "DELETE", entry.companyId);
+        if (!canDelete) return NextResponse.json({ error: "权限不足：无法冲销凭证" }, { status: 403 });
+      }
+    }
+
     // 审批不能自审
     if (action === "approve" && entry.createdById === session.user.id) {
       return NextResponse.json({ error: "不能审批自己创建的凭证" }, { status: 400 });
@@ -74,8 +89,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         data: { status: "DRAFT" },
       });
     } else if (action === "post") {
-      // 验证期间仍然开放
-      if (entry.fiscalPeriod.status !== "OPEN") {
+      // 验证期间仍然开放（OPEN 或 SOFT_CLOSE 均可过账）
+      if (!["OPEN", "SOFT_CLOSE"].includes(entry.fiscalPeriod.status)) {
         return NextResponse.json({ error: "所在期间已关闭，无法过账" }, { status: 400 });
       }
 

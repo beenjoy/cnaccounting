@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkPermission } from "@/lib/permissions";
 
 // GET /api/fixed-assets/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -57,6 +58,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!member || !["OWNER", "ADMIN", "ACCOUNTANT"].includes(member.role)) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
+
+  const canUpdate = await checkPermission(session.user.id, company!.organizationId, "FIXED_ASSET", "UPDATE", asset.companyId);
+  if (!canUpdate) return NextResponse.json({ error: "权限不足：无法修改固定资产" }, { status: 403 });
+
   if (asset.status === "DISPOSED") {
     return NextResponse.json({ error: "已处置资产不可修改" }, { status: 400 });
   }
@@ -124,6 +129,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!member || !["OWNER", "ADMIN"].includes(member.role)) {
     return NextResponse.json({ error: "无权限，仅 OWNER/ADMIN 可删除" }, { status: 403 });
   }
+
+  const canDelete = await checkPermission(session.user.id, company!.organizationId, "FIXED_ASSET", "DELETE", asset.companyId);
+  if (!canDelete) return NextResponse.json({ error: "权限不足：无法删除固定资产" }, { status: 403 });
 
   await db.fixedAsset.delete({ where: { id } });
 

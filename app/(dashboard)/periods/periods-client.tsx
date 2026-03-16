@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Lock, Unlock, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Lock, Unlock, ChevronDown, ChevronRight, Plus, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +40,22 @@ interface PeriodsClientProps {
   fiscalYears: FiscalYear[];
 }
 
+type PeriodAction = "open" | "soft_close" | "close";
+
+function getPeriodBadge(status: string) {
+  if (status === "OPEN")
+    return <Badge variant="success" className="text-xs">开放</Badge>;
+  if (status === "SOFT_CLOSE")
+    return <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-300">软关账</Badge>;
+  return <Badge variant="secondary" className="text-xs">已关闭</Badge>;
+}
+
+function getPeriodCardClass(status: string) {
+  if (status === "OPEN") return "border-green-200 bg-green-50";
+  if (status === "SOFT_CLOSE") return "border-orange-200 bg-orange-50";
+  return "border-gray-200 bg-gray-50";
+}
+
 export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClientProps) {
   const router = useRouter();
   const [fiscalYears, setFiscalYears] = useState(initial);
@@ -48,7 +64,7 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
   );
   const [pendingAction, setPendingAction] = useState<{
     periodId: string;
-    action: "open" | "close";
+    action: PeriodAction;
     periodName: string;
   } | null>(null);
   const [reopenReason, setReopenReason] = useState("");
@@ -65,12 +81,8 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
     });
   };
 
-  const handlePeriodAction = (period: FiscalPeriod, action: "open" | "close") => {
-    if (action === "open") {
-      setPendingAction({ periodId: period.id, action, periodName: period.name });
-    } else {
-      setPendingAction({ periodId: period.id, action, periodName: period.name });
-    }
+  const handlePeriodAction = (period: FiscalPeriod, action: PeriodAction) => {
+    setPendingAction({ periodId: period.id, action, periodName: period.name });
   };
 
   const confirmAction = async () => {
@@ -96,22 +108,28 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
         return;
       }
 
-      toast.success(
-        pendingAction.action === "open"
-          ? `已重新开放 ${pendingAction.periodName}`
-          : `已关闭 ${pendingAction.periodName}`
-      );
+      const successMsg: Record<PeriodAction, string> = {
+        soft_close: `已软关账 ${pendingAction.periodName}`,
+        close: `已硬关账 ${pendingAction.periodName}`,
+        open: `已重新开放 ${pendingAction.periodName}`,
+      };
+      toast.success(successMsg[pendingAction.action]);
       setPendingAction(null);
       setReopenReason("");
       router.refresh();
 
       // 乐观更新
+      const newStatus: Record<PeriodAction, string> = {
+        soft_close: "SOFT_CLOSE",
+        close: "CLOSED",
+        open: "OPEN",
+      };
       setFiscalYears((prev) =>
         prev.map((fy) => ({
           ...fy,
           periods: fy.periods.map((p) =>
             p.id === pendingAction.periodId
-              ? { ...p, status: pendingAction.action === "open" ? "OPEN" : "CLOSED" }
+              ? { ...p, status: newStatus[pendingAction.action] }
               : p
           ),
         }))
@@ -145,6 +163,20 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
     } finally {
       setIsPending(false);
     }
+  };
+
+  const getDialogTitle = (action: PeriodAction) => {
+    if (action === "soft_close") return "软关账";
+    if (action === "close") return "硬关账（永久关闭）";
+    return "重新开放期间";
+  };
+
+  const getDialogDesc = (action: PeriodAction, periodName: string) => {
+    if (action === "soft_close")
+      return `确定要对 ${periodName} 执行软关账？软关账后普通用户无法录入凭证，仅会计/管理员可继续录入调整分录。`;
+    if (action === "close")
+      return `确定要对 ${periodName} 执行硬关账？硬关账后任何人均无法录入凭证，此操作不可逆。`;
+    return `确定要重新开放 ${periodName}？请填写原因以留存审计记录。`;
   };
 
   return (
@@ -182,7 +214,8 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {fy.periods.filter((p) => p.status === "OPEN").length} 个期间开放
+                  {fy.periods.filter((p) => p.status === "OPEN").length} 个期间开放 /{" "}
+                  {fy.periods.filter((p) => p.status === "SOFT_CLOSE").length} 个软关账
                 </div>
               </div>
             </CardHeader>
@@ -193,45 +226,62 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
                   {fy.periods.map((period) => (
                     <div
                       key={period.id}
-                      className={`rounded-md border p-3 ${
-                        period.status === "OPEN"
-                          ? "border-green-200 bg-green-50"
-                          : "border-gray-200 bg-gray-50"
-                      }`}
+                      className={`rounded-md border p-3 ${getPeriodCardClass(period.status)}`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">{period.name}</span>
-                        <Badge
-                          variant={period.status === "OPEN" ? "success" : "secondary"}
-                          className="text-xs"
-                        >
-                          {period.status === "OPEN" ? "开放" : "已关闭"}
-                        </Badge>
+                        {getPeriodBadge(period.status)}
                       </div>
                       {!fy.isClosed && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-7 text-xs"
-                          onClick={() =>
-                            handlePeriodAction(
-                              period,
-                              period.status === "OPEN" ? "close" : "open"
-                            )
-                          }
-                        >
-                          {period.status === "OPEN" ? (
+                        <div className="flex flex-col gap-1">
+                          {/* OPEN 状态：显示「软关账」按钮 */}
+                          {period.status === "OPEN" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs"
+                              onClick={() => handlePeriodAction(period, "soft_close")}
+                            >
+                              <LockKeyhole className="mr-1 h-3 w-3" />
+                              软关账
+                            </Button>
+                          )}
+                          {/* SOFT_CLOSE 状态：显示「硬关账」和「重新开放」 */}
+                          {period.status === "SOFT_CLOSE" && (
                             <>
-                              <Lock className="mr-1 h-3 w-3" />
-                              关闭期间
-                            </>
-                          ) : (
-                            <>
-                              <Unlock className="mr-1 h-3 w-3" />
-                              重新开放
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full h-7 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                                onClick={() => handlePeriodAction(period, "close")}
+                              >
+                                <Lock className="mr-1 h-3 w-3" />
+                                硬关账
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full h-7 text-xs"
+                                onClick={() => handlePeriodAction(period, "open")}
+                              >
+                                <Unlock className="mr-1 h-3 w-3" />
+                                重新开放
+                              </Button>
                             </>
                           )}
-                        </Button>
+                          {/* CLOSED 状态：显示「重新开放」 */}
+                          {period.status === "CLOSED" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs"
+                              onClick={() => handlePeriodAction(period, "open")}
+                            >
+                              <Unlock className="mr-1 h-3 w-3" />
+                              重新开放
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -253,17 +303,14 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {pendingAction?.action === "close" ? "关闭期间" : "重新开放期间"}
+              {pendingAction ? getDialogTitle(pendingAction.action) : ""}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              您确定要
-              {pendingAction?.action === "close" ? "关闭" : "重新开放"}
-              <strong className="text-foreground"> {pendingAction?.periodName} </strong>
-              吗？
-              {pendingAction?.action === "close" &&
-                "关闭后将无法在此期间内新建或修改凭证。"}
+              {pendingAction
+                ? getDialogDesc(pendingAction.action, pendingAction.periodName)
+                : ""}
             </p>
             {pendingAction?.action === "open" && (
               <div className="space-y-1.5">
@@ -284,7 +331,13 @@ export function PeriodsClient({ companyId, fiscalYears: initial }: PeriodsClient
               取消
             </Button>
             <Button
-              variant={pendingAction?.action === "close" ? "destructive" : "default"}
+              variant={
+                pendingAction?.action === "close"
+                  ? "destructive"
+                  : pendingAction?.action === "soft_close"
+                  ? "default"
+                  : "default"
+              }
               onClick={confirmAction}
               disabled={isPending}
             >

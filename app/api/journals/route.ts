@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import Decimal from "decimal.js";
+import { checkPermission } from "@/lib/permissions";
 
 const lineSchema = z.object({
   lineNumber: z.number().int().positive(),
@@ -12,6 +13,8 @@ const lineSchema = z.object({
   creditAmount: z.string().default("0"),
   currency: z.string().default("CNY"),
   exchangeRate: z.string().default("1"),
+  isIntercompany: z.boolean().default(false),
+  counterpartyCompanyId: z.string().optional(),
 });
 
 const createSchema = z.object({
@@ -42,10 +45,10 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
-    // 验证期间是否开放
+    // 验证期间是否开放（支持 OPEN 和 SOFT_CLOSE）
     const period = await db.fiscalPeriod.findFirst({
-      where: { id: data.fiscalPeriodId, status: "OPEN" },
-      include: { fiscalYear: true },
+      where: { id: data.fiscalPeriodId, status: { in: ["OPEN", "SOFT_CLOSE"] } },
+      include: { fiscalYear: { include: { company: true } } },
     });
 
     if (!period) {
@@ -54,6 +57,25 @@ export async function POST(req: NextRequest) {
 
     if (period.fiscalYear.isClosed) {
       return NextResponse.json({ error: "会计年度已结账" }, { status: 400 });
+    }
+
+    const orgId = period.fiscalYear.company.organizationId;
+
+    // 权限检查：CREATE JOURNAL_ENTRY
+    const canCreate = await checkPermission(session.user.id, orgId, "JOURNAL_ENTRY", "CREATE", data.companyId);
+    if (!canCreate) {
+      return NextResponse.json({ error: "权限不足：无法新建凭证" }, { status: 403 });
+    }
+
+    // 软关账期间：仅 ACCOUNTANT/ADMIN/OWNER 可录入调整分录
+    if (period.status === "SOFT_CLOSE") {
+      const member = await db.organizationMember.findFirst({
+        where: { userId: session.user.id, organizationId: orgId },
+        select: { role: true },
+      });
+      if (!member || !["ACCOUNTANT", "ADMIN", "OWNER"].includes(member.role)) {
+        return NextResponse.json({ error: "期间已软关账，仅会计/管理员可录入调整分录" }, { status: 403 });
+      }
     }
 
     // 计算合计（提交时才校验平衡）
@@ -129,6 +151,8 @@ export async function POST(req: NextRequest) {
             exchangeRate: new Decimal(l.exchangeRate).toFixed(10),
             debitAmountLC: new Decimal(l.debitAmount).toFixed(4),
             creditAmountLC: new Decimal(l.creditAmount).toFixed(4),
+            isIntercompany: l.isIntercompany,
+            counterpartyCompanyId: l.counterpartyCompanyId ?? null,
           })),
         },
       },

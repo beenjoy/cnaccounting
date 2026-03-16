@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { checkPermission } from "@/lib/permissions";
 
 const REPORT_CATEGORIES = [
   "CURRENT_ASSET", "NON_CURRENT_ASSET",
@@ -35,6 +36,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const account = await db.chartOfAccount.findUnique({ where: { id } });
     if (!account) {
       return NextResponse.json({ error: "科目不存在" }, { status: 404 });
+    }
+
+    // 权限检查
+    const company = await db.company.findUnique({
+      where: { id: account.companyId },
+      select: { organizationId: true },
+    });
+    if (company) {
+      const canUpdate = await checkPermission(session.user.id, company.organizationId, "CHART_OF_ACCOUNT", "UPDATE", account.companyId);
+      if (!canUpdate) return NextResponse.json({ error: "权限不足：无法修改科目" }, { status: 403 });
     }
 
     // 如果有子科目则不能设为末级

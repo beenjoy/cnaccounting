@@ -176,6 +176,17 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 const impair    = Number(asset.impairmentReserve);
                 const bookValue = cost - accDep - impair;
                 const statusInfo = STATUS_LABELS[asset.status] ?? { label: asset.status, cls: "bg-gray-100 text-gray-600" };
+
+                // Serialize Decimal fields to plain numbers for Client Component
+                const assetForClient = {
+                  ...asset,
+                  acquisitionCost: cost,
+                  residualRate: Number(asset.residualRate),
+                  totalWorkload: asset.totalWorkload != null ? Number(asset.totalWorkload) : null,
+                  accumulatedDepreciation: accDep,
+                  impairmentReserve: impair,
+                };
+
                 return (
                   <tr key={asset.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3 font-mono text-xs">{asset.assetNumber}</td>
@@ -206,14 +217,14 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                     {canEdit && (
                       <td className="px-4 py-3 text-center">
                         <div className="flex justify-center gap-2">
-                          <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="edit" asset={asset} />
+                          <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="edit" asset={assetForClient} />
                           {asset.status !== "DISPOSED" && (
                             <>
-                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="impair" asset={asset} periods={openPeriods} />
-                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="dispose" asset={asset} />
+                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="impair" asset={assetForClient} periods={openPeriods} />
+                              <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="dispose" asset={assetForClient} />
                             </>
                           )}
-                          <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="delete" asset={asset} />
+                          <AssetActions companyId={company.id} leafAccounts={leafAccounts} mode="delete" asset={assetForClient} />
                         </div>
                       </td>
                     )}
